@@ -37,7 +37,8 @@ class MailLinkService
         Cache::put($key, $user->id, 300);
         Cache::put(CacheKey::get('LAST_SEND_LOGIN_WITH_MAIL_LINK_TIMESTAMP', $email), time(), 60);
 
-        $redirectUrl = '/#/login?verify=' . $code . '&redirect=' . ($redirect ? $redirect : 'dashboard');
+        $defaultRedirect = 'dashboard';
+        $redirectUrl = '/#/login?verify=' . $code . '&redirect=' . ($redirect ?: $defaultRedirect);
         if (admin_setting('app_url')) {
             $link = admin_setting('app_url') . $redirectUrl;
         } else {

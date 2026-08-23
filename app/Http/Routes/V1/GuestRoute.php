@@ -14,12 +14,14 @@ class GuestRoute
         $router->group([
             'prefix' => 'guest'
         ], function ($router) {
-            // Plan
-            $router->get('/plan/fetch', [PlanController::class, 'fetch']);
+            if (!config('app.internal_free_mode')) {
+                // Plan
+                $router->get('/plan/fetch', [PlanController::class, 'fetch']);
+                // Payment
+                $router->match(['get', 'post'], '/payment/notify/{method}/{uuid}', [PaymentController::class, 'notify']);
+            }
             // Telegram
             $router->post('/telegram/webhook', [TelegramController::class, 'webhook']);
-            // Payment
-            $router->match(['get', 'post'], '/payment/notify/{method}/{uuid}', [PaymentController::class, 'notify']);
             // Comm
             $router->get('/comm/config', [CommController::class, 'config']);
         });

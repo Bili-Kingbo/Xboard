@@ -15,7 +15,7 @@ class CheckTrafficExceeded extends Command
 
     public function handle()
     {
-        $count = Redis::scard('traffic:pending_check');
+        $count = (int) Redis::scard('traffic:pending_check');
         if ($count <= 0) {
             return;
         }
@@ -23,11 +23,22 @@ class CheckTrafficExceeded extends Command
         $pendingUserIds = array_map('intval', Redis::spop('traffic:pending_check', $count));
 
         $exceededUsers = User::toBase()
-            ->whereIn('id', $pendingUserIds)
-            ->whereRaw('u + d >= transfer_enable')
-            ->where('transfer_enable', '>', 0)
-            ->where('banned', 0)
-            ->select(['id', 'group_id'])
+            ->leftJoin('v2_server_group', 'v2_server_group.id', '=', 'v2_user.group_id')
+            ->whereIn('v2_user.id', $pendingUserIds)
+            ->whereRaw('(v2_user.u + v2_user.d) >= CASE
+                WHEN v2_server_group.transfer_enable IS NULL
+                    OR v2_user.transfer_enable >= v2_server_group.transfer_enable
+                THEN v2_user.transfer_enable
+                ELSE v2_server_group.transfer_enable
+            END')
+            ->whereRaw('CASE
+                WHEN v2_server_group.transfer_enable IS NULL
+                    OR v2_user.transfer_enable >= v2_server_group.transfer_enable
+                THEN v2_user.transfer_enable
+                ELSE v2_server_group.transfer_enable
+            END > 0')
+            ->where('v2_user.banned', 0)
+            ->select(['v2_user.id', 'v2_user.group_id'])
             ->get();
 
         if ($exceededUsers->isEmpty()) {

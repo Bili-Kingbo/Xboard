@@ -2,12 +2,13 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use App\Services\Plugin\HookManager;
 
 abstract class AbstractProtocol
 {
     /**
-     * @var array 用户信息
+     * @var array|User 用户信息
      */
     protected $user;
 
@@ -49,7 +50,7 @@ abstract class AbstractProtocol
     /**
      * 构造函数
      *
-     * @param array $user 用户信息
+     * @param array|User $user 用户信息
      * @param array $servers 服务器信息
      * @param string|null $clientName 客户端名称
      * @param string|null $clientVersion 客户端版本

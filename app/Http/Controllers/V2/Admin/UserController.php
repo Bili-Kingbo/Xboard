@@ -184,7 +184,7 @@ class UserController extends Controller
         $pageSize = $request->input('pageSize', 10);
 
         $userModel = User::query()
-            ->with(['plan:id,name', 'invite_user:id,email', 'group:id,name'])
+            ->with(['plan:id,name', 'invite_user:id,email', 'group:id,name,transfer_enable'])
             ->select((new User())->getTable() . '.*')
             ->selectRaw('(u + d) as total_used');
 
@@ -206,10 +206,29 @@ class UserController extends Controller
     public static function transformUserData(User $user): array
     {
         $model = $user;
+        $personalTransfer = (int) ($user->transfer_enable ?? 0);
+        $groupTransfer = $user->getGroupTransferEnable();
         $user = $user->toArray();
-        $user['balance'] = $user['balance'] / 100;
-        $user['commission_balance'] = $user['commission_balance'] / 100;
+        $user['personal_transfer_enable'] = $personalTransfer;
+        $user['group_transfer_enable'] = $groupTransfer;
+        $user['effective_transfer_enable'] = max($personalTransfer, $groupTransfer);
+        $user['transfer_enable'] = $user['effective_transfer_enable'];
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
+
+        if (config('app.internal_free_mode')) {
+            unset(
+                $user['balance'],
+                $user['commission_balance'],
+                $user['commission_type'],
+                $user['commission_rate'],
+                $user['discount'],
+                $user['plan'],
+                $user['plan_id']
+            );
+        } else {
+            $user['balance'] = $user['balance'] / 100;
+            $user['commission_balance'] = $user['commission_balance'] / 100;
+        }
         return HookManager::filter('admin.user.transform', $user, $model);
     }
 
@@ -220,9 +239,15 @@ class UserController extends Controller
         ], [
             'id.required' => '用户ID不能为空'
         ]);
-        $user = User::find($request->input('id'))->load('invite_user');
+        $user = User::find($request->input('id'))?->load([
+            'invite_user',
+            'group:id,name,transfer_enable',
+        ]);
+        if (!$user) {
+            return $this->fail([400202, '用户不存在']);
+        }
         $user = HookManager::filter('admin.user.detail', $user, $request);
-        return $this->success($user);
+        return $this->success(self::transformUserData($user));
     }
 
     public function update(UserUpdate $request)
@@ -245,13 +270,24 @@ class UserController extends Controller
         } else {
             unset($params['password']);
         }
-        // 处理订阅计划
-        if (isset($params['plan_id'])) {
+        // 处理订阅计划（付费模式）
+        if (isset($params['plan_id']) && !config('app.internal_free_mode')) {
             $plan = Plan::find($params['plan_id']);
             if (!$plan) {
                 return $this->fail([400202, '订阅计划不存在']);
             }
             $params['group_id'] = $plan->group_id;
+        }
+
+        if (config('app.internal_free_mode')) {
+            unset(
+                $params['plan_id'],
+                $params['balance'],
+                $params['commission_balance'],
+                $params['commission_type'],
+                $params['commission_rate'],
+                $params['discount']
+            );
         }
         // 处理邀请用户
         if ($request->input('invite_user_email') && $inviteUser = User::byEmail($request->input('invite_user_email'))->first()) {
@@ -619,7 +655,7 @@ class UserController extends Controller
                     'user.id' => $user->id,
                     'user.email' => $user->email,
                     'user.uuid' => $user->uuid,
-                    'user.plan_name' => $user->plan?->name ?? '',
+                    'user.plan_name' => optional($user->plan)->name ?? '',
                     'user.expired_at' => $user->expired_at ? date('Y-m-d H:i:s', $user->expired_at) : '',
                     'user.transfer_enable' => (int) ($user->transfer_enable ?? 0),
                     'user.transfer_used' => (int) (($user->u ?? 0) + ($user->d ?? 0)),

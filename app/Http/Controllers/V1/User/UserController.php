@@ -76,6 +76,7 @@ class UserController extends Controller
         }
         
         $currentToken = $user->currentAccessToken();
+        // @phpstan-ignore if.alwaysTrue (runtime guards may provide no persisted token)
         if ($currentToken) {
             $user->tokens()->where('id', '!=', $currentToken->id)->delete();
         } else {
@@ -103,13 +104,23 @@ class UserController extends Controller
                 'discount',
                 'commission_rate',
                 'telegram_id',
-                'uuid'
+                'uuid',
+                'group_id'
             ])
             ->first();
         if (!$user) {
             return $this->fail([400, __('The user does not exist')]);
         }
+        $user->load('group:id,name,transfer_enable');
+        $personalTransfer = (int) $user->transfer_enable;
+        $user['personal_transfer_enable'] = $personalTransfer;
+        $user['group_transfer_enable'] = $user->getGroupTransferEnable();
+        $user['transfer_enable'] = $user->getEffectiveTransferEnable();
         $user['avatar_url'] = 'https://cdn.v2ex.com/gravatar/' . md5($user->email) . '?s=64&d=identicon';
+
+        if (config('app.internal_free_mode')) {
+            unset($user['balance'], $user['commission_balance'], $user['discount'], $user['commission_rate']);
+        }
         return $this->success($user);
     }
 
@@ -142,18 +153,24 @@ class UserController extends Controller
                 'uuid',
                 'device_limit',
                 'speed_limit',
-                'next_reset_at'
+                'next_reset_at',
+                'group_id'
             ])
             ->first();
         if (!$user) {
             return $this->fail([400, __('The user does not exist')]);
         }
-        if ($user->plan_id) {
+        if ($user->plan_id && !config('app.internal_free_mode')) {
             $user['plan'] = Plan::find($user->plan_id);
             if (!$user['plan']) {
                 return $this->fail([400, __('Subscription plan does not exist')]);
             }
         }
+        $user->load('group:id,name,transfer_enable');
+        $personalTransfer = (int) $user->transfer_enable;
+        $user['personal_transfer_enable'] = $personalTransfer;
+        $user['group_transfer_enable'] = $user->getGroupTransferEnable();
+        $user['transfer_enable'] = $user->getEffectiveTransferEnable();
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
         $userService = new UserService();
         $user['reset_day'] = $userService->getResetDay($user);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Guest;
 
 use App\Http\Controllers\Controller;
+use App\Models\ServerGroup;
 use App\Services\Plugin\HookManager;
 use App\Utils\Dict;
 use App\Utils\Helper;
@@ -12,6 +13,7 @@ class CommController extends Controller
 {
     public function config()
     {
+        $internalFreeMode = (bool) config('app.internal_free_mode');
         $data = [
             'tos_url' => admin_setting('tos_url'),
             'is_email_verify' => (int) admin_setting('email_verify', 0) ? 1 : 0,
@@ -28,6 +30,10 @@ class CommController extends Controller
             'app_description' => admin_setting('app_description'),
             'app_url' => admin_setting('app_url'),
             'logo' => admin_setting('logo'),
+            'internal_free_mode' => $internalFreeMode,
+            'registration_groups' => $internalFreeMode
+                ? ServerGroup::query()->orderBy('name')->get(['id', 'name'])->values()
+                : [],
             // 保持向后兼容
             'is_recaptcha' => (int) admin_setting('captcha_enable', 0) ? 1 : 0,
         ];

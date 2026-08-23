@@ -47,7 +47,7 @@ class UserService
 
     public function isAvailable(User $user)
     {
-        if (!$user->banned && $user->transfer_enable && ($user->expired_at > time() || $user->expired_at === NULL)) {
+        if (!$user->banned && $user->getEffectiveTransferEnable() > 0 && ($user->expired_at > time() || $user->expired_at === NULL)) {
             return true;
         }
         return false;
@@ -55,13 +55,15 @@ class UserService
 
     public function getAvailableUsers()
     {
-        return User::whereRaw('u + d < transfer_enable')
+        return User::with('group')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
                     ->orWhere('expired_at', NULL);
             })
             ->where('banned', 0)
-            ->get();
+            ->get()
+            ->filter(fn(User $user) => $user->getRemainingTraffic() > 0)
+            ->values();
     }
 
     public function getUnAvailbaleUsers()
@@ -146,7 +148,9 @@ class UserService
             'upload' => $user->u ?? 0,
             'download' => $user->d ?? 0,
             'total_used' => $user->getTotalUsedTraffic(),
-            'total_available' => $user->transfer_enable ?? 0,
+            'personal_available' => (int) ($user->transfer_enable ?? 0),
+            'group_available' => $user->getGroupTransferEnable(),
+            'total_available' => $user->getEffectiveTransferEnable(),
             'remaining' => $user->getRemainingTraffic(),
             'usage_percentage' => $user->getTrafficUsagePercentage(),
             'next_reset_at' => $user->next_reset_at,
@@ -181,7 +185,7 @@ class UserService
         // 处理计划
         if (isset($data['plan_id'])) {
             $this->setPlanForUser($user, $data['plan_id'], $data['expired_at'] ?? null);
-        } else {
+        } else if (!config('app.internal_free_mode')) {
             $this->setTryOutPlan(user: $user);
         }
 

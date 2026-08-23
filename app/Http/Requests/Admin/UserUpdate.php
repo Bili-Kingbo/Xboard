@@ -22,6 +22,7 @@ class UserUpdate extends FormRequest
             'expired_at' => 'nullable|integer',
             'banned' => 'bool',
             'plan_id' => 'nullable|integer',
+            'group_id' => 'nullable|integer|exists:v2_server_group,id',
             'commission_rate' => 'nullable|integer|min:0|max:100',
             'discount' => 'nullable|integer|min:0|max:100',
             'is_admin' => 'boolean',
@@ -35,6 +36,17 @@ class UserUpdate extends FormRequest
             'speed_limit' => 'nullable|integer',
             'device_limit' => 'nullable|integer'
         ];
+
+        if (config('app.internal_free_mode')) {
+            unset(
+                $rules['plan_id'],
+                $rules['balance'],
+                $rules['commission_type'],
+                $rules['commission_balance'],
+                $rules['commission_rate'],
+                $rules['discount']
+            );
+        }
 
         return HookManager::filter('admin.user.update.rules', $rules, $this);
     }
@@ -52,6 +64,8 @@ class UserUpdate extends FormRequest
             'is_staff.required' => '是否员工不能为空',
             'is_staff.in' => '是否员工格式不正确',
             'plan_id.integer' => '订阅计划格式不正确',
+            'group_id.integer' => '权限组格式不正确',
+            'group_id.exists' => '权限组不存在',
             'commission_rate.integer' => '推荐返利比例格式不正确',
             'commission_rate.nullable' => '推荐返利比例格式不正确',
             'commission_rate.min' => '推荐返利比例最小为0',

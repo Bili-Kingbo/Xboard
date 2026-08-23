@@ -87,7 +87,7 @@ class ConfigController extends Controller
      */
     private function getConfigMappings(): array
     {
-        return [
+        $mappings = [
             'invite' => [
                 'invite_force' => (bool) admin_setting('invite_force', 0),
                 'invite_commission' => admin_setting('invite_commission', 10),
@@ -206,6 +206,18 @@ class ConfigController extends Controller
                 'subscribe_template_surfboard' => subscribe_template('surfboard') ?? ''
             ]
         ];
+
+        if (config('app.internal_free_mode')) {
+            unset($mappings['invite'], $mappings['subscribe']);
+            unset(
+                $mappings['site']['try_out_plan_id'],
+                $mappings['site']['try_out_hour'],
+                $mappings['site']['currency'],
+                $mappings['site']['currency_symbol'],
+            );
+        }
+
+        return $mappings;
     }
 
     public function save(ConfigSave $request)

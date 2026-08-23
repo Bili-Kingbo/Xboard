@@ -84,7 +84,7 @@ class ServerService
 
     /**
      * 根据权限组获取可用的用户列表
-     * @param array $groupIds
+     * @param Server $node
      * @return Collection
      */
     public static function getAvailableUsers(Server $node)
@@ -94,18 +94,24 @@ class ServerService
             return collect();
         }
         $users = User::toBase()
-            ->whereIn('group_id', $groupIds)
-            ->whereRaw('u + d < transfer_enable')
+            ->leftJoin('v2_server_group', 'v2_server_group.id', '=', 'v2_user.group_id')
+            ->whereIn('v2_user.group_id', $groupIds)
+            ->whereRaw('(v2_user.u + v2_user.d) < CASE
+                WHEN v2_server_group.transfer_enable IS NULL
+                    OR v2_user.transfer_enable >= v2_server_group.transfer_enable
+                THEN v2_user.transfer_enable
+                ELSE v2_server_group.transfer_enable
+            END')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
                     ->orWhere('expired_at', NULL);
             })
             ->where('banned', 0)
             ->select([
-                'id',
-                'uuid',
-                'speed_limit',
-                'device_limit'
+                'v2_user.id',
+                'v2_user.uuid',
+                'v2_user.speed_limit',
+                'v2_user.device_limit'
             ])
             ->get();
         return HookManager::filter('server.users.get', $users, $node);

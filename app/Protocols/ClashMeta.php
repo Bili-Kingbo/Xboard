@@ -3,6 +3,8 @@
 namespace App\Protocols;
 
 use App\Models\Server;
+use App\Models\User;
+use App\Services\SpecialServerService;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Yaml\Yaml;
@@ -193,6 +195,20 @@ class ClashMeta extends AbstractProtocol
             if ($item['type'] === Server::TYPE_MIERU) {
                 array_push($proxy, self::buildMieru($item['password'], $item));
                 array_push($proxies, $item['name']);
+            }
+        }
+
+        if ($user instanceof User) {
+            foreach (SpecialServerService::getAvailableProxies($user) as $specialProxy) {
+                $baseName = trim((string) ($specialProxy['name'] ?? '特殊节点')) ?: '特殊节点';
+                $name = $baseName;
+                $suffix = 2;
+                while (in_array($name, $proxies, true)) {
+                    $name = $baseName . ' · 特殊' . $suffix++;
+                }
+                $specialProxy['name'] = $name;
+                $proxy[] = $specialProxy;
+                $proxies[] = $name;
             }
         }
 

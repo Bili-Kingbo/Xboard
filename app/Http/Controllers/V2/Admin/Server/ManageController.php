@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ServerSave;
 use App\Models\Server;
 use App\Models\ServerGroup;
+use App\Models\SpecialServer;
 use App\Services\ServerService;
+use App\Services\SpecialNodeImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +24,88 @@ class ManageController extends Controller
             return $item;
         });
         return $this->success($servers);
+    }
+
+    public function getSpecialNodes(Request $request)
+    {
+        $nodes = SpecialServer::query()
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get()
+            ->map(function (SpecialServer $node) {
+                $node->setAttribute('groups', ServerGroup::whereIn('id', $node->group_ids ?? [])->get(['name', 'id']));
+                return $node;
+            });
+
+        return $this->success($nodes);
+    }
+
+    public function importSpecial(Request $request, SpecialNodeImportService $importer)
+    {
+        $params = $request->validate([
+            'source' => 'required|string|max:2000000',
+            'group_ids' => 'required|array|min:1',
+            'group_ids.*' => 'required|integer|exists:v2_server_group,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:40',
+            'show' => 'nullable|boolean',
+        ]);
+
+        $parsed = $importer->parse($params['source']);
+        $groupIds = collect($params['group_ids'])->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $tags = collect($params['tags'] ?? [])->map(fn ($tag) => trim($tag))->filter()->unique()->values()->all();
+        $show = $params['show'] ?? true;
+
+        $created = DB::transaction(function () use ($parsed, $groupIds, $tags, $show) {
+            $nextSort = (int) SpecialServer::max('sort');
+            return collect($parsed['proxies'])->map(function (array $proxy) use ($parsed, $groupIds, $tags, $show, &$nextSort) {
+                return SpecialServer::create([
+                    'name' => $proxy['name'],
+                    'type' => $proxy['type'],
+                    'group_ids' => $groupIds,
+                    'tags' => $tags,
+                    'proxy_payload' => $proxy,
+                    'source_type' => $parsed['source_type'],
+                    'source_label' => $parsed['source_label'],
+                    'show' => $show,
+                    'sort' => ++$nextSort,
+                ]);
+            });
+        });
+
+        return $this->success([
+            'count' => $created->count(),
+            'nodes' => $created->map->only(['id', 'name', 'type', 'group_ids', 'tags', 'show']),
+        ]);
+    }
+
+    public function updateSpecial(Request $request)
+    {
+        $params = $request->validate([
+            'id' => 'required|integer|exists:v2_special_server,id',
+            'name' => 'nullable|string|max:120',
+            'group_ids' => 'nullable|array|min:1',
+            'group_ids.*' => 'integer|exists:v2_server_group,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:40',
+            'show' => 'nullable|boolean',
+        ]);
+        $node = SpecialServer::findOrFail($params['id']);
+        unset($params['id']);
+        if (isset($params['group_ids'])) {
+            $params['group_ids'] = collect($params['group_ids'])->map(fn ($id) => (string) $id)->unique()->values()->all();
+        }
+        $node->update($params);
+        return $this->success(true);
+    }
+
+    public function dropSpecial(Request $request)
+    {
+        $params = $request->validate([
+            'id' => 'required|integer|exists:v2_special_server,id',
+        ]);
+        SpecialServer::whereKey($params['id'])->delete();
+        return $this->success(true);
     }
 
     public function sort(Request $request)
@@ -277,7 +361,7 @@ class ManageController extends Controller
         }
 
         $copiedServer = $server->replicate();
-        $copiedServer->show = 0;
+        $copiedServer->show = false;
         $copiedServer->code = null;
         $copiedServer->u = 0;
         $copiedServer->d = 0;

@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Exceptions\ApiException;
 use App\Models\InviteCode;
 use App\Models\Plan;
+use App\Models\ServerGroup;
 use App\Models\User;
 use App\Services\CaptchaService;
 use App\Services\Plugin\HookManager;
@@ -71,6 +72,14 @@ class RegisterService
         // 检查是否关闭注册
         if ((int) admin_setting('stop_register', 0)) {
             return [false, [400, __('Registration has closed')]];
+        }
+
+        // 内部免费模式下，节点权限组由用户在注册时选择。
+        if (config('app.internal_free_mode')) {
+            $groupId = filter_var($request->input('group_id'), FILTER_VALIDATE_INT);
+            if (!$groupId || !ServerGroup::whereKey($groupId)->exists()) {
+                return [false, [422, __('Please select a valid identity group')]];
+            }
         }
 
         // 检查邀请码要求
@@ -159,11 +168,20 @@ class RegisterService
 
         // 创建用户
         $userService = app(UserService::class);
-        $user = $userService->createUser([
+        $userData = [
             'email' => $email,
             'password' => $password,
             'invite_user_id' => $inviteUserId,
-        ]);
+        ];
+
+        if (config('app.internal_free_mode')) {
+            $transferGb = max(0, min((int) config('app.internal_free_default_user_transfer_gb', 0), 8388607));
+            $userData['group_id'] = (int) $request->input('group_id');
+            $userData['transfer_enable'] = $transferGb * 1073741824;
+            $userData['expired_at'] = null;
+        }
+
+        $user = $userService->createUser($userData);
 
         // 保存用户
         if (!$user->save()) {
