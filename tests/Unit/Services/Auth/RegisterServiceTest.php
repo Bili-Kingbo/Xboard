@@ -2,7 +2,11 @@
 
 namespace Tests\Unit\Services\Auth;
 
+use App\Models\ServerGroup;
+use App\Models\Server;
+use App\Models\User;
 use App\Services\Auth\RegisterService;
+use App\Services\ServerService;
 use App\Utils\CacheKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -14,10 +18,19 @@ class RegisterServiceTest extends TestCase
     use RefreshDatabase;
 
     private RegisterService $service;
+    private int $groupId;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        config([
+            'cache.stores.redis' => ['driver' => 'array'],
+            'app.internal_free_mode' => true,
+            'app.internal_free_default_user_transfer_gb' => 0,
+            'app.settings_cache_store' => 'array',
+        ]);
+        app()->forgetScopedInstances();
 
         Cache::flush();
         admin_setting([
@@ -30,7 +43,77 @@ class RegisterServiceTest extends TestCase
             'register_limit_by_ip_enable' => 0,
         ]);
 
+        $group = new ServerGroup();
+        $group->name = 'Engineering';
+        $group->transfer_enable = 500 * 1073741824;
+        $group->save();
+        $this->groupId = $group->id;
+
         $this->service = app(RegisterService::class);
+    }
+
+    public function test_validate_register_requires_an_existing_identity_group(): void
+    {
+        [$missingSuccess, $missingResult] = $this->service->validateRegister($this->makeRequest([
+            'group_id' => null,
+        ]));
+        [$unknownSuccess, $unknownResult] = $this->service->validateRegister($this->makeRequest([
+            'group_id' => 999999,
+        ]));
+
+        $this->assertFalse($missingSuccess);
+        $this->assertSame(422, $missingResult[0]);
+        $this->assertFalse($unknownSuccess);
+        $this->assertSame(422, $unknownResult[0]);
+    }
+
+    public function test_register_assigns_free_access_for_the_selected_group(): void
+    {
+        admin_setting(['email_verify' => 0]);
+
+        [$success, $user] = $this->service->register($this->makeRequest());
+
+        $this->assertTrue($success);
+        $this->assertInstanceOf(User::class, $user);
+        $this->assertSame($this->groupId, $user->group_id);
+        $this->assertNull($user->plan_id);
+        $this->assertNull($user->expired_at);
+        $this->assertSame(0, $user->transfer_enable);
+        $this->assertSame(500 * 1073741824, $user->getEffectiveTransferEnable());
+        $this->assertTrue($user->isActive());
+    }
+
+    public function test_effective_traffic_uses_the_larger_personal_or_group_limit(): void
+    {
+        $user = new User();
+        $user->group_id = $this->groupId;
+        $user->setRelation('group', ServerGroup::findOrFail($this->groupId));
+
+        $user->transfer_enable = 100 * 1073741824;
+        $this->assertSame(500 * 1073741824, $user->getEffectiveTransferEnable());
+
+        $user->transfer_enable = 750 * 1073741824;
+        $this->assertSame(750 * 1073741824, $user->getEffectiveTransferEnable());
+    }
+
+    public function test_node_user_sync_uses_the_larger_personal_or_group_limit(): void
+    {
+        admin_setting(['email_verify' => 0]);
+        [, $user] = $this->service->register($this->makeRequest());
+        $node = new Server(['group_ids' => [(string) $this->groupId]]);
+
+        $user->forceFill([
+            'transfer_enable' => 100 * 1073741824,
+            'u' => 400 * 1073741824,
+            'd' => 0,
+        ])->save();
+        $this->assertTrue(ServerService::getAvailableUsers($node)->contains('id', $user->id));
+
+        $user->forceFill(['u' => 600 * 1073741824])->save();
+        $this->assertFalse(ServerService::getAvailableUsers($node)->contains('id', $user->id));
+
+        $user->forceFill(['transfer_enable' => 700 * 1073741824])->save();
+        $this->assertTrue(ServerService::getAvailableUsers($node)->contains('id', $user->id));
     }
 
     public function test_validate_register_rejects_missing_cached_email_code(): void
@@ -70,6 +153,7 @@ class RegisterServiceTest extends TestCase
         return Request::create('/api/v1/passport/auth/register', 'POST', array_merge([
             'email' => 'user@example.com',
             'password' => 'password123',
+            'group_id' => $this->groupId,
         ], $overrides));
     }
 }

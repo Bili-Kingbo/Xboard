@@ -120,7 +120,22 @@ class ConfigSave extends FormRequest
      */
     public function rules()
     {
-        return self::RULES;
+        $rules = self::RULES;
+        if (config('app.internal_free_mode')) {
+            foreach ([
+                'invite_force', 'invite_commission', 'invite_gen_limit', 'invite_never_expire',
+                'commission_first_time_enable', 'commission_auto_check_enable',
+                'commission_withdraw_limit', 'commission_withdraw_method', 'withdraw_close_enable',
+                'commission_distribution_enable', 'commission_distribution_l1',
+                'commission_distribution_l2', 'commission_distribution_l3',
+                'try_out_enable', 'try_out_plan_id', 'try_out_hour', 'currency', 'currency_symbol',
+                'plan_change_enable', 'reset_traffic_method', 'surplus_enable',
+                'new_order_event_id', 'renew_order_event_id', 'change_order_event_id',
+            ] as $commercialKey) {
+                unset($rules[$commercialKey]);
+            }
+        }
+        return $rules;
     }
 
     public function messages()

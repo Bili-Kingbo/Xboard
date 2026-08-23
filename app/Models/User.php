@@ -158,9 +158,12 @@ class User extends Authenticatable
      */
     public function isActive(): bool
     {
+        $hasAccess = $this->plan_id !== null ||
+            (config('app.internal_free_mode') && $this->group_id !== null);
+
         return !$this->banned && 
                ($this->expired_at === null || $this->expired_at > time()) &&
-               $this->plan_id !== null;
+               $hasAccess;
     }
 
     /** 
@@ -190,12 +193,32 @@ class User extends Authenticatable
     }
 
     /**
+     * 获取权限组流量额度。
+     */
+    public function getGroupTransferEnable(): int
+    {
+        $group = $this->relationLoaded('group')
+            ? $this->getRelation('group')
+            : $this->group()->first();
+
+        return (int) data_get($group, 'transfer_enable', 0);
+    }
+
+    /**
+     * 个人额度与权限组额度取较大值作为最终有效额度。
+     */
+    public function getEffectiveTransferEnable(): int
+    {
+        return max((int) ($this->transfer_enable ?? 0), $this->getGroupTransferEnable());
+    }
+
+    /**
      * 获取剩余流量
      */
     public function getRemainingTraffic(): int
     {
         $used = $this->getTotalUsedTraffic();
-        $total = $this->transfer_enable ?? 0;
+        $total = $this->getEffectiveTransferEnable();
         return max(0, $total - $used);
     }
 
@@ -204,7 +227,7 @@ class User extends Authenticatable
      */
     public function getTrafficUsagePercentage(): float
     {
-        $total = $this->transfer_enable ?? 0;
+        $total = $this->getEffectiveTransferEnable();
         if ($total <= 0) {
             return 0;
         }

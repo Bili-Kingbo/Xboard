@@ -122,7 +122,11 @@ class Helper
 
     public static function getSubscribeUrl(string $token, $subscribeUrl = null)
     {
-        $path = route('client.subscribe', ['token' => $token], false);
+        $routeParameters = ['token' => $token];
+        if (config('app.internal_free_mode')) {
+            $routeParameters['flag'] = 'meta';
+        }
+        $path = route('client.subscribe', $routeParameters, false);
         
         if ($subscribeUrl) {
             $finalUrl = rtrim($subscribeUrl, '/') . $path;
@@ -144,8 +148,8 @@ class Helper
 
     public static function randomPort($range): int {
         $portRange = explode('-', (string) $range, 2);
-        $min = (int) ($portRange[0] ?? 0);
-        $max = (int) ($portRange[1] ?? $portRange[0] ?? 0);
+        $min = (int) $portRange[0];
+        $max = (int) ($portRange[1] ?? $portRange[0]);
         if ($min > $max) {
             [$min, $max] = [$max, $min];
         }

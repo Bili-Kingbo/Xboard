@@ -53,6 +53,11 @@ class ClientController extends Controller
 
     public function doSubscribe(Request $request, $user, $servers = null)
     {
+        // 协议生成器统一读取 transfer_enable；内部模式下改为最终有效额度。
+        if (config('app.internal_free_mode') && $user instanceof \App\Models\User) {
+            $user->setAttribute('transfer_enable', $user->getEffectiveTransferEnable());
+        }
+
         if ($servers === null) {
             $servers = ServerService::getAvailableServers($user);
             $servers = HookManager::filter('client.subscribe.servers', $servers, $user, $request);
@@ -147,7 +152,11 @@ class ClientController extends Controller
 
     private function getClientInfo(Request $request): array
     {
-        $flag = strtolower($request->input('flag') ?? $request->header('User-Agent', ''));
+        $requestedFlag = $request->input('flag');
+        $flag = strtolower(
+            $requestedFlag
+                ?? (config('app.internal_free_mode') ? 'meta' : $request->header('User-Agent', ''))
+        );
 
         $clientName = null;
         $clientVersion = null;

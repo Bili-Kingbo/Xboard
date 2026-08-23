@@ -58,6 +58,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Internal free access
+    |--------------------------------------------------------------------------
+    |
+    | This fork is used as an internal company VPN. Users choose a node group
+    | during registration and receive a non-expiring free traffic allowance.
+    | Purchasing routes are disabled while this mode is enabled.
+    |
+    */
+
+    'internal_free_mode' => env('INTERNAL_FREE_MODE', true),
+
+    'internal_free_default_user_transfer_gb' => env('INTERNAL_FREE_DEFAULT_USER_TRANSFER_GB', 0),
+
+    'settings_cache_store' => env('SETTINGS_CACHE_STORE', 'redis'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

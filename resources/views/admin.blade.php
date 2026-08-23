@@ -63,10 +63,10 @@
       <link rel="stylesheet" crossorigin href="/assets/admin/{{ $css }}" />
     @endforeach
     @foreach($locales as $locale)
-      <script src="/assets/admin/{{ $locale }}"></script>
+      <script src="/assets/admin/{{ $locale }}?v=internal-free-3"></script>
     @endforeach
     @foreach($scripts as $js)
-      <script type="module" crossorigin src="/assets/admin/{{ $js }}"></script>
+      <script type="module" crossorigin src="/assets/admin/{{ $js }}?v=internal-free-3"></script>
     @endforeach
   @else
     {{-- Fallback: hardcoded paths for backward compatibility --}}
@@ -77,6 +77,7 @@
     <script src="/assets/admin/locales/zh-CN.js"></script>
     <script src="/assets/admin/locales/ko-KR.js"></script>
   @endif
+  <script defer src="/assets/admin/special-node-import.js?v=2"></script>
 </head>
 
 <body>

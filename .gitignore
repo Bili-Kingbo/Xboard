@@ -23,6 +23,7 @@ docker-compose.yml
 storage/laravels.conf
 storage/laravels.pid
 storage/update_pending
+storage/preview*.sqlite*
 storage/laravels-timer-process.pid
 cli-php.ini
 frontend
