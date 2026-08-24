@@ -256,6 +256,10 @@ admin = admin.replace(
   'function Qlt(){const{data:e}=Ult();return H.useMemo(()=>{const t=Vlt.map(e=>({...e,sub:e.sub?.map(e=>({...e}))}));return[...t,...Zlt(e??[])]},[e])}',
   'function Qlt(){return H.useMemo(()=>Vlt.map(e=>({...e,sub:e.sub?.map(e=>({...e}))})),[])}',
 );
+admin = admin.replace(
+  'getPluginList:e=>IL(`${NT}/plugin/getPlugins`,{params:e?{type:e}:{}})',
+  'getPluginList:e=>Promise.resolve({data:[]})',
+);
 
 if (!admin.includes('group_id:dy().nullable().default(null)')) {
   admin = removeBalanced(admin, '{id:"dashboard"', '{', '}', 'dashboard navigation');
