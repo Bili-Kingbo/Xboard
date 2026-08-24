@@ -59,6 +59,9 @@ When internal free mode is enabled:
   exposed. Internal mode does not load plugins, register plugin schedules, or
   install default plugins; administrators continue to manage nodes and
   identity-group access directly while the fixed portal theme remains active.
+- Administrators can enable a daily traffic reset under node settings. When
+  enabled, used traffic is cleared once per day at 00:00 in `Asia/Shanghai`,
+  with a persistent date marker preventing duplicate resets.
 - If upstream user/admin bundles are refreshed, run both patch scripts:
 
 ```bash

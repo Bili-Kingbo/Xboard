@@ -137,6 +137,7 @@
     "traffic_reset.reset_type.first_day_year": "Сброс в первый день года",
     "traffic_reset.reset_type.manual": "Ручной сброс",
     "traffic_reset.reset_type.purchase": "Приобретение пакета сброса",
+    "traffic_reset.reset_type.daily": "Ежедневный сброс",
     "traffic_reset.source.auto": "Автоматический запуск",
     "traffic_reset.source.manual": "Ручной запуск",
     "traffic_reset.source.api": "Вызов API",

@@ -137,6 +137,7 @@
     "traffic_reset.reset_type.first_day_year": "每年1月1日重置",
     "traffic_reset.reset_type.manual": "手動重置",
     "traffic_reset.reset_type.purchase": "購買重置包",
+    "traffic_reset.reset_type.daily": "每日重置",
     "traffic_reset.source.auto": "自動觸發",
     "traffic_reset.source.manual": "手動觸發",
     "traffic_reset.source.api": "API調用",

@@ -57,6 +57,7 @@ class TrafficResetLog extends Model
     public const TYPE_FIRST_DAY_YEAR = 'first_day_year';
     public const TYPE_MANUAL = 'manual';
     public const TYPE_PURCHASE = 'purchase';
+    public const TYPE_DAILY = 'daily';
 
     // 触发来源常量
     public const SOURCE_AUTO = 'auto';
@@ -79,6 +80,7 @@ class TrafficResetLog extends Model
             self::TYPE_FIRST_DAY_YEAR => __('traffic_reset.reset_type.first_day_year'),
             self::TYPE_MANUAL => __('traffic_reset.reset_type.manual'),
             self::TYPE_PURCHASE => __('traffic_reset.reset_type.purchase'),
+            self::TYPE_DAILY => __('traffic_reset.reset_type.daily'),
         ];
     }
 

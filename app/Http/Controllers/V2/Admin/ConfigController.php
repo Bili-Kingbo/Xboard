@@ -145,6 +145,7 @@ class ConfigController extends Controller
                 'device_limit_mode' => (int) admin_setting('device_limit_mode', 0),
                 'server_ws_enable' => (bool) admin_setting('server_ws_enable', 1),
                 'server_ws_url' => admin_setting('server_ws_url', ''),
+                'internal_daily_traffic_reset_enable' => (bool) admin_setting('internal_daily_traffic_reset_enable', false),
             ],
             'email' => [
                 'email_host' => admin_setting('email_host'),

@@ -31,10 +31,15 @@ class TrafficResetService
   /**
    * Perform the traffic reset for a user.
    */
-  public function performReset(User $user, string $triggerSource = TrafficResetLog::SOURCE_MANUAL): bool
+  public function performReset(
+    User $user,
+    string $triggerSource = TrafficResetLog::SOURCE_MANUAL,
+    ?string $resetType = null,
+    array $metadata = []
+  ): bool
   {
     try {
-      return DB::transaction(function () use ($user, $triggerSource) {
+      return DB::transaction(function () use ($user, $triggerSource, $resetType, $metadata) {
         $oldUpload = $user->u ?? 0;
         $oldDownload = $user->d ?? 0;
         $oldTotal = $oldUpload + $oldDownload;
@@ -50,7 +55,7 @@ class TrafficResetService
         ]);
 
         $this->recordResetLog($user, [
-          'reset_type' => $this->getResetTypeFromPlan($user->plan),
+          'reset_type' => $resetType ?? $this->getResetTypeFromPlan($user->plan),
           'trigger_source' => $triggerSource,
           'old_upload' => $oldUpload,
           'old_download' => $oldDownload,
@@ -58,6 +63,7 @@ class TrafficResetService
           'new_upload' => 0,
           'new_download' => 0,
           'new_total' => 0,
+          'metadata' => $metadata ?: null,
         ]);
 
         $this->clearUserCache($user);
@@ -74,6 +80,60 @@ class TrafficResetService
 
       return false;
     }
+  }
+
+  /**
+   * Reset traffic used by all internal users for a Beijing calendar day.
+   * Users that have not consumed traffic are intentionally skipped.
+   */
+  public function resetInternalUsersDaily(Carbon $beijingNow): array
+  {
+    if (!config('app.internal_free_mode')) {
+      return [
+        'total_users' => 0,
+        'total_candidates' => 0,
+        'total_reset' => 0,
+        'error_count' => 0,
+      ];
+    }
+
+    $totalUsers = User::count();
+    $users = User::query()
+      ->where(function ($query) {
+        $query->where('u', '>', 0)
+          ->orWhere('d', '>', 0);
+      })
+      ->orderBy('id')
+      ->get();
+
+    $resetCount = 0;
+    $errorCount = 0;
+    $resetDate = $beijingNow->copy()->timezone('Asia/Shanghai')->toDateString();
+
+    foreach ($users as $user) {
+      $success = $this->performReset(
+        $user,
+        TrafficResetLog::SOURCE_CRON,
+        TrafficResetLog::TYPE_DAILY,
+        [
+          'timezone' => 'Asia/Shanghai',
+          'reset_date' => $resetDate,
+        ]
+      );
+
+      if ($success) {
+        $resetCount++;
+      } else {
+        $errorCount++;
+      }
+    }
+
+    return [
+      'total_users' => $totalUsers,
+      'total_candidates' => $users->count(),
+      'total_reset' => $resetCount,
+      'error_count' => $errorCount,
+    ];
   }
 
   /**

@@ -137,6 +137,7 @@
     "traffic_reset.reset_type.first_day_year": "First Day of Year Reset",
     "traffic_reset.reset_type.manual": "Manual Reset",
     "traffic_reset.reset_type.purchase": "Purchase Reset Package",
+    "traffic_reset.reset_type.daily": "Daily Reset",
     "traffic_reset.source.auto": "Auto Trigger",
     "traffic_reset.source.manual": "Manual Trigger",
     "traffic_reset.source.api": "API Call",

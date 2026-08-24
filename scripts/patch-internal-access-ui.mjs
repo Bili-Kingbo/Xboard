@@ -289,6 +289,27 @@ admin = admin.replace(
 admin = admin.replace('machine:!g,online:!g', 'online:!g');
 admin = admin.replace('mobileGridFields:["type","machine","online","rate","group_ids"]', 'mobileGridFields:["type","online","rate","group_ids"]');
 
+if (!admin.includes('name:"internal_daily_traffic_reset_enable"')) {
+  admin = replaceOnce(
+    admin,
+    'server_ws_enable:uy().nullable(),server_ws_url:cy().nullable()',
+    'internal_daily_traffic_reset_enable:uy().nullable(),server_ws_enable:uy().nullable(),server_ws_url:cy().nullable()',
+    'daily traffic reset setting schema',
+  );
+  admin = replaceOnce(
+    admin,
+    'device_limit_mode:0,server_ws_enable:!1,server_ws_url:""',
+    'device_limit_mode:0,internal_daily_traffic_reset_enable:!1,server_ws_enable:!1,server_ws_url:""',
+    'daily traffic reset setting default',
+  );
+  admin = replaceOnce(
+    admin,
+    'Q.jsx($y,{control:r.control,name:"server_ws_enable"',
+    'Q.jsx($y,{control:r.control,name:"internal_daily_traffic_reset_enable",render:({field:t})=>Q.jsxs(Gy,{className:"flex flex-row items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900 dark:bg-emerald-950/20",children:[Q.jsxs("div",{className:"space-y-0.5 pr-4",children:[Q.jsx(Zy,{className:"text-base",children:"每日自动重置用户流量"}),Q.jsx(Xy,{children:"开启后，每天北京时间 00:00 自动清零所有用户已用流量。"})]}),Q.jsx(Yy,{children:Q.jsx(oZt,{checked:t.value??!1,onCheckedChange:t.onChange})})]})}),Q.jsx($y,{control:r.control,name:"server_ws_enable"',
+    'daily traffic reset setting field',
+  );
+}
+
 if (!admin.includes('group_id:dy().nullable().default(null)')) {
   admin = removeBalanced(admin, '{id:"dashboard"', '{', '}', 'dashboard navigation');
   admin = removeBalanced(admin, '{id:"payment-config"', '{', '}', 'payment navigation');

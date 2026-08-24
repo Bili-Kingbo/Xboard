@@ -37,6 +37,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('check:traffic-exceeded')->everyMinute()->onOneServer()->withoutOverlapping(10)->runInBackground();
         // reset
         $schedule->command('reset:traffic')->everyMinute()->onOneServer()->withoutOverlapping(10);
+        $schedule->command('internal:reset-daily-traffic')
+            ->dailyAt('00:00')
+            ->timezone('Asia/Shanghai')
+            ->onOneServer()
+            ->withoutOverlapping(30);
         $schedule->command('reset:log')->daily()->onOneServer();
         // send
         $schedule->command('send:remindMail', ['--force'])->dailyAt('11:30')->onOneServer();
