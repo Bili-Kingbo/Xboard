@@ -260,6 +260,34 @@ admin = admin.replace(
   'getPluginList:e=>IL(`${NT}/plugin/getPlugins`,{params:e?{type:e}:{}})',
   'getPluginList:e=>Promise.resolve({data:[]})',
 );
+admin = admin.replace(
+  'DT=()=>IL(LT+"/server/machine/fetch")',
+  'DT=()=>Promise.resolve({data:[]})',
+);
+
+if (admin.includes('control:x.control,name:"machine_id"')) {
+  admin = removeCallContaining(
+    admin,
+    'control:x.control,name:"machine_id"',
+    'Q.jsx($y,',
+    'node machine selector',
+  );
+}
+if (admin.includes('{id:"machine",accessorFn:e=>e.machine_id??"__standalone__"')) {
+  admin = removeBalanced(
+    admin,
+    '{id:"machine",accessorFn:e=>e.machine_id??"__standalone__"',
+    '{',
+    '}',
+    'node deployment column',
+  );
+}
+admin = admin.replace(
+  ',e.getColumn("machine")&&Q.jsx(b5t,{column:e.getColumn("machine"),title:c("toolbar.server"),options:u})',
+  '',
+);
+admin = admin.replace('machine:!g,online:!g', 'online:!g');
+admin = admin.replace('mobileGridFields:["type","machine","online","rate","group_ids"]', 'mobileGridFields:["type","online","rate","group_ids"]');
 
 if (!admin.includes('group_id:dy().nullable().default(null)')) {
   admin = removeBalanced(admin, '{id:"dashboard"', '{', '}', 'dashboard navigation');
