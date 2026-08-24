@@ -170,8 +170,10 @@ class User extends Authenticatable
      * 检查用户是否可用节点流量且充足
      */
     public function isAvailable(): bool
-    {     
-        return $this->isActive() && $this->getRemainingTraffic() > 0;   
+    {
+        return $this->isActive() && (
+            $this->hasUnlimitedTraffic() || $this->getRemainingTraffic() > 0
+        );
     }
 
     /**
@@ -193,23 +195,19 @@ class User extends Authenticatable
     }
 
     /**
-     * 获取权限组流量额度。
-     */
-    public function getGroupTransferEnable(): int
-    {
-        $group = $this->relationLoaded('group')
-            ? $this->getRelation('group')
-            : $this->group()->first();
-
-        return (int) data_get($group, 'transfer_enable', 0);
-    }
-
-    /**
-     * 个人额度与权限组额度取较大值作为最终有效额度。
+     * 获取用户流量额度。0 表示无限流量。
      */
     public function getEffectiveTransferEnable(): int
     {
-        return max((int) ($this->transfer_enable ?? 0), $this->getGroupTransferEnable());
+        return max(0, (int) ($this->transfer_enable ?? 0));
+    }
+
+    /**
+     * 0 是内部免费模式和管理端统一使用的无限流量标记。
+     */
+    public function hasUnlimitedTraffic(): bool
+    {
+        return $this->getEffectiveTransferEnable() === 0;
     }
 
     /**
@@ -219,6 +217,11 @@ class User extends Authenticatable
     {
         $used = $this->getTotalUsedTraffic();
         $total = $this->getEffectiveTransferEnable();
+
+        if ($total === 0) {
+            return 0;
+        }
+
         return max(0, $total - $used);
     }
 

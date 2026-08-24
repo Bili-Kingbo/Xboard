@@ -47,36 +47,40 @@ class UserService
 
     public function isAvailable(User $user)
     {
-        if (!$user->banned && $user->getEffectiveTransferEnable() > 0 && ($user->expired_at > time() || $user->expired_at === NULL)) {
-            return true;
-        }
-        return false;
+        return $user->isAvailable();
     }
 
     public function getAvailableUsers()
     {
-        return User::with('group')
+        return User::query()
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
                     ->orWhere('expired_at', NULL);
             })
             ->where('banned', 0)
-            ->get()
-            ->filter(fn(User $user) => $user->getRemainingTraffic() > 0)
-            ->values();
+            ->where(function ($query) {
+                $query->where('transfer_enable', 0)
+                    ->orWhereRaw('(u + d) < transfer_enable');
+            })
+            ->get();
     }
 
     public function getUnAvailbaleUsers()
     {
-        return User::where(function ($query) {
+        $query = User::where(function ($query) {
             $query->where('expired_at', '<', time())
-                ->orWhere('expired_at', 0);
-        })
-            ->where(function ($query) {
-                $query->where('plan_id', NULL)
-                    ->orWhere('transfer_enable', 0);
-            })
-            ->get();
+                ->whereNotNull('expired_at');
+        })->orWhere('banned', 1)
+            ->orWhere(function ($query) {
+                $query->where('transfer_enable', '>', 0)
+                    ->whereRaw('(u + d) >= transfer_enable');
+            });
+
+        if (!config('app.internal_free_mode')) {
+            $query->orWhereNull('plan_id');
+        }
+
+        return $query->get();
     }
 
     public function getUsersByIds($ids)
@@ -149,8 +153,8 @@ class UserService
             'download' => $user->d ?? 0,
             'total_used' => $user->getTotalUsedTraffic(),
             'personal_available' => (int) ($user->transfer_enable ?? 0),
-            'group_available' => $user->getGroupTransferEnable(),
             'total_available' => $user->getEffectiveTransferEnable(),
+            'unlimited' => $user->hasUnlimitedTraffic(),
             'remaining' => $user->getRemainingTraffic(),
             'usage_percentage' => $user->getTrafficUsagePercentage(),
             'next_reset_at' => $user->next_reset_at,

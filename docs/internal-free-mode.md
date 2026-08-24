@@ -11,11 +11,10 @@ INTERNAL_FREE_DEFAULT_USER_TRANSFER_GB=0
 SETTINGS_CACHE_STORE=redis
 ```
 
-- Create the required identity groups, set each group's traffic allowance, and
-  assign nodes to those groups before opening registration.
+- Create the required identity groups and assign nodes to those groups before
+  opening registration. Identity groups control node access only.
 - `INTERNAL_FREE_DEFAULT_USER_TRANSFER_GB` is the personal allowance assigned
-  to each new user. The default is `0`, so the selected group's allowance is
-  used unless an administrator gives that user a larger personal allowance.
+  to each new user. `0` means unlimited traffic and is the default.
 - `SETTINGS_CACHE_STORE` remains `redis` in production. `array` can be used for
   isolated local tests that do not run Redis.
 
@@ -25,20 +24,20 @@ Run the database migration before enabling the mode:
 php artisan migrate --force
 ```
 
-The effective allowance is always:
+User traffic semantics are:
 
 ```text
-max(user personal allowance, identity-group allowance)
+0 = unlimited traffic
+positive number = personal traffic limit in GB
 ```
 
-For example, a user with 100 GB in a 500 GB group receives 500 GB. A user with
-750 GB in that same group receives 750 GB.
+Identity groups never change a user's traffic allowance.
 
 When internal free mode is enabled:
 
 - Registration requires a valid server-group ID.
-- New users receive the selected group, no plan, no expiry, and the configured
-  personal default allowance.
+- New users receive the selected group, no plan, no expiry, and unlimited
+  traffic by default.
 - Default login and magic-link redirects go to the internal Dashboard.
 - User plan, order, coupon, gift-card, commission, and payment callback routes
   are not registered. The matching admin finance routes are also disabled.
@@ -53,8 +52,13 @@ When internal free mode is enabled:
   Meta subscription console, and displays the latest company announcement.
 - The former user knowledge/documentation navigation is not registered in
   internal mode; operational announcements live directly on the Dashboard.
-- The admin landing page is identity-group management. Group traffic is edited
-  there; personal traffic and group membership are edited under user management.
+- The admin landing page is identity-group management. Personal traffic and
+  group membership are edited under user management; entering `0` means
+  unlimited traffic.
+- Machine management, plugin management, and theme configuration are not
+  exposed. Internal mode does not load plugins, register plugin schedules, or
+  install default plugins; administrators continue to manage nodes and
+  identity-group access directly while the fixed portal theme remains active.
 - If upstream user/admin bundles are refreshed, run both patch scripts:
 
 ```bash

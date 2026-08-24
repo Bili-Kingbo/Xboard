@@ -45,7 +45,6 @@ class RegisterServiceTest extends TestCase
 
         $group = new ServerGroup();
         $group->name = 'Engineering';
-        $group->transfer_enable = 500 * 1073741824;
         $group->save();
         $this->groupId = $group->id;
 
@@ -79,37 +78,41 @@ class RegisterServiceTest extends TestCase
         $this->assertNull($user->plan_id);
         $this->assertNull($user->expired_at);
         $this->assertSame(0, $user->transfer_enable);
-        $this->assertSame(500 * 1073741824, $user->getEffectiveTransferEnable());
+        $this->assertSame(0, $user->getEffectiveTransferEnable());
+        $this->assertTrue($user->hasUnlimitedTraffic());
         $this->assertTrue($user->isActive());
+        $this->assertTrue($user->isAvailable());
     }
 
-    public function test_effective_traffic_uses_the_larger_personal_or_group_limit(): void
+    public function test_zero_personal_traffic_means_unlimited_and_positive_value_is_a_limit(): void
     {
         $user = new User();
         $user->group_id = $this->groupId;
-        $user->setRelation('group', ServerGroup::findOrFail($this->groupId));
 
-        $user->transfer_enable = 100 * 1073741824;
-        $this->assertSame(500 * 1073741824, $user->getEffectiveTransferEnable());
+        $user->transfer_enable = 0;
+        $user->u = 900 * 1073741824;
+        $this->assertTrue($user->hasUnlimitedTraffic());
+        $this->assertSame(0, $user->getRemainingTraffic());
 
-        $user->transfer_enable = 750 * 1073741824;
-        $this->assertSame(750 * 1073741824, $user->getEffectiveTransferEnable());
+        $user->transfer_enable = 1000 * 1073741824;
+        $this->assertFalse($user->hasUnlimitedTraffic());
+        $this->assertSame(100 * 1073741824, $user->getRemainingTraffic());
     }
 
-    public function test_node_user_sync_uses_the_larger_personal_or_group_limit(): void
+    public function test_node_user_sync_treats_zero_as_unlimited(): void
     {
         admin_setting(['email_verify' => 0]);
         [, $user] = $this->service->register($this->makeRequest());
         $node = new Server(['group_ids' => [(string) $this->groupId]]);
 
         $user->forceFill([
-            'transfer_enable' => 100 * 1073741824,
-            'u' => 400 * 1073741824,
+            'transfer_enable' => 0,
+            'u' => 600 * 1073741824,
             'd' => 0,
         ])->save();
         $this->assertTrue(ServerService::getAvailableUsers($node)->contains('id', $user->id));
 
-        $user->forceFill(['u' => 600 * 1073741824])->save();
+        $user->forceFill(['transfer_enable' => 500 * 1073741824])->save();
         $this->assertFalse(ServerService::getAvailableUsers($node)->contains('id', $user->id));
 
         $user->forceFill(['transfer_enable' => 700 * 1073741824])->save();

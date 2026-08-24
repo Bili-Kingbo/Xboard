@@ -22,10 +22,6 @@ class GroupController extends Controller
         // 只在需要时手动加载server_count
         $serverGroups->each(function ($group) {
             $group->setAttribute('server_count', $group->server_count);
-            $group->setAttribute(
-                'transfer_enable_gb',
-                round(((int) $group->transfer_enable) / 1073741824, 3)
-            );
         });
 
         return $this->success($serverGroups);
@@ -36,11 +32,8 @@ class GroupController extends Controller
         $params = $request->validate([
             'id' => 'nullable|integer|exists:v2_server_group,id',
             'name' => 'required|string|max:255',
-            'transfer_enable_gb' => 'required|numeric|min:0|max:8388607',
         ], [
             'name.required' => '组名不能为空',
-            'transfer_enable_gb.required' => '权限组流量不能为空',
-            'transfer_enable_gb.numeric' => '权限组流量格式不正确',
         ]);
 
         if ($request->input('id')) {
@@ -50,7 +43,6 @@ class GroupController extends Controller
         }
 
         $serverGroup->name = $params['name'];
-        $serverGroup->transfer_enable = (int) round(((float) $params['transfer_enable_gb']) * 1073741824);
         return $this->success($serverGroup->save());
     }
 

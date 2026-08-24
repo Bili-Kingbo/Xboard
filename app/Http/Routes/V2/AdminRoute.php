@@ -101,19 +101,21 @@ class AdminRoute
                 $router->get('/generateEchKey', [ManageController::class, 'generateEchKey']);
             });
 
-            // 机器管理接口
-            $router->group([
-                'prefix' => 'server/machine'
-            ], function ($router) {
-                $router->get('/fetch', [MachineController::class, 'fetch']);
-                $router->post('/save', [MachineController::class, 'save']);
-                $router->post('/drop', [MachineController::class, 'drop']);
-                $router->post('/resetToken', [MachineController::class, 'resetToken']);
-                $router->get('/getToken', [MachineController::class, 'getToken']);
-                $router->get('/installCommand', [MachineController::class, 'installCommand']);
-                $router->get('/nodes', [MachineController::class, 'nodes']);
-                $router->get('/history', [MachineController::class, 'history']);
-            });
+            if (!config('app.internal_free_mode')) {
+                // 机器管理仅保留给标准发行模式；内部 VPN 直接管理节点。
+                $router->group([
+                    'prefix' => 'server/machine'
+                ], function ($router) {
+                    $router->get('/fetch', [MachineController::class, 'fetch']);
+                    $router->post('/save', [MachineController::class, 'save']);
+                    $router->post('/drop', [MachineController::class, 'drop']);
+                    $router->post('/resetToken', [MachineController::class, 'resetToken']);
+                    $router->get('/getToken', [MachineController::class, 'getToken']);
+                    $router->get('/installCommand', [MachineController::class, 'installCommand']);
+                    $router->get('/nodes', [MachineController::class, 'nodes']);
+                    $router->get('/history', [MachineController::class, 'history']);
+                });
+            }
 
             if (!config('app.internal_free_mode')) {
                 // Order
@@ -255,33 +257,37 @@ class AdminRoute
             //     $router->post('/execute', [UpdateController::class, 'executeUpdate']);
             // });
 
-            // Theme
-            $router->group([
-                'prefix' => 'theme'
-            ], function ($router) {
-                $router->get('/getThemes', [ThemeController::class, 'getThemes']);
-                $router->post('/upload', [ThemeController::class, 'upload']);
-                $router->post('/delete', [ThemeController::class, 'delete']);
-                $router->post('/saveThemeConfig', [ThemeController::class, 'saveThemeConfig']);
-                $router->post('/getThemeConfig', [ThemeController::class, 'getThemeConfig']);
-            });
+            if (!config('app.internal_free_mode')) {
+                // 内部 VPN 使用固定门户主题，不提供主题上传或配置接口。
+                $router->group([
+                    'prefix' => 'theme'
+                ], function ($router) {
+                    $router->get('/getThemes', [ThemeController::class, 'getThemes']);
+                    $router->post('/upload', [ThemeController::class, 'upload']);
+                    $router->post('/delete', [ThemeController::class, 'delete']);
+                    $router->post('/saveThemeConfig', [ThemeController::class, 'saveThemeConfig']);
+                    $router->post('/getThemeConfig', [ThemeController::class, 'getThemeConfig']);
+                });
+            }
 
-            // Plugin
-            $router->group([
-                'prefix' => 'plugin'
-            ], function ($router) {
-                $router->get('/types', [\App\Http\Controllers\V2\Admin\PluginController::class, 'types']);
-                $router->get('/getPlugins', [\App\Http\Controllers\V2\Admin\PluginController::class, 'index']);
-                $router->post('/upload', [\App\Http\Controllers\V2\Admin\PluginController::class, 'upload']);
-                $router->post('/delete', [\App\Http\Controllers\V2\Admin\PluginController::class, 'delete']);
-                $router->post('install', [\App\Http\Controllers\V2\Admin\PluginController::class, 'install']);
-                $router->post('uninstall', [\App\Http\Controllers\V2\Admin\PluginController::class, 'uninstall']);
-                $router->post('enable', [\App\Http\Controllers\V2\Admin\PluginController::class, 'enable']);
-                $router->post('disable', [\App\Http\Controllers\V2\Admin\PluginController::class, 'disable']);
-                $router->get('config', [\App\Http\Controllers\V2\Admin\PluginController::class, 'getConfig']);
-                $router->post('config', [\App\Http\Controllers\V2\Admin\PluginController::class, 'updateConfig']);
-                $router->post('upgrade', [\App\Http\Controllers\V2\Admin\PluginController::class, 'upgrade']);
-            });
+            if (!config('app.internal_free_mode')) {
+                // 内部 VPN 不提供插件安装、启停、配置或升级接口。
+                $router->group([
+                    'prefix' => 'plugin'
+                ], function ($router) {
+                    $router->get('/types', [\App\Http\Controllers\V2\Admin\PluginController::class, 'types']);
+                    $router->get('/getPlugins', [\App\Http\Controllers\V2\Admin\PluginController::class, 'index']);
+                    $router->post('/upload', [\App\Http\Controllers\V2\Admin\PluginController::class, 'upload']);
+                    $router->post('/delete', [\App\Http\Controllers\V2\Admin\PluginController::class, 'delete']);
+                    $router->post('install', [\App\Http\Controllers\V2\Admin\PluginController::class, 'install']);
+                    $router->post('uninstall', [\App\Http\Controllers\V2\Admin\PluginController::class, 'uninstall']);
+                    $router->post('enable', [\App\Http\Controllers\V2\Admin\PluginController::class, 'enable']);
+                    $router->post('disable', [\App\Http\Controllers\V2\Admin\PluginController::class, 'disable']);
+                    $router->get('config', [\App\Http\Controllers\V2\Admin\PluginController::class, 'getConfig']);
+                    $router->post('config', [\App\Http\Controllers\V2\Admin\PluginController::class, 'updateConfig']);
+                    $router->post('upgrade', [\App\Http\Controllers\V2\Admin\PluginController::class, 'upgrade']);
+                });
+            }
 
             // 流量重置管理
             $router->group([

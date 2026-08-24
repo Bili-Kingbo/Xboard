@@ -184,7 +184,7 @@ class UserController extends Controller
         $pageSize = $request->input('pageSize', 10);
 
         $userModel = User::query()
-            ->with(['plan:id,name', 'invite_user:id,email', 'group:id,name,transfer_enable'])
+            ->with(['plan:id,name', 'invite_user:id,email', 'group:id,name'])
             ->select((new User())->getTable() . '.*')
             ->selectRaw('(u + d) as total_used');
 
@@ -207,12 +207,11 @@ class UserController extends Controller
     {
         $model = $user;
         $personalTransfer = (int) ($user->transfer_enable ?? 0);
-        $groupTransfer = $user->getGroupTransferEnable();
         $user = $user->toArray();
         $user['personal_transfer_enable'] = $personalTransfer;
-        $user['group_transfer_enable'] = $groupTransfer;
-        $user['effective_transfer_enable'] = max($personalTransfer, $groupTransfer);
-        $user['transfer_enable'] = $user['effective_transfer_enable'];
+        $user['effective_transfer_enable'] = $personalTransfer;
+        $user['transfer_enable'] = $personalTransfer;
+        $user['unlimited_traffic'] = $personalTransfer === 0;
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
 
         if (config('app.internal_free_mode')) {
@@ -241,7 +240,7 @@ class UserController extends Controller
         ]);
         $user = User::find($request->input('id'))?->load([
             'invite_user',
-            'group:id,name,transfer_enable',
+            'group:id,name',
         ]);
         if (!$user) {
             return $this->fail([400202, '用户不存在']);
@@ -394,12 +393,16 @@ class UserController extends Controller
             $query->chunk(500, function ($users) use ($output) {
                 foreach ($users as $user) {
                     try {
+                        $isUnlimited = (int) $user->transfer_enable === 0;
+                        $remainingTraffic = $isUnlimited
+                            ? '无限'
+                            : Helper::trafficConvert(max(0, $user->transfer_enable - ($user->u + $user->d)));
                         $row = [
                             $user->email,
                             number_format($user->balance / 100, 2),
                             number_format($user->commission_balance / 100, 2),
-                            Helper::trafficConvert($user->transfer_enable),
-                            Helper::trafficConvert($user->transfer_enable - ($user->u + $user->d)),
+                            $isUnlimited ? '无限' : Helper::trafficConvert($user->transfer_enable),
+                            $remainingTraffic,
                             $user->expired_at ? date('Y-m-d H:i:s', $user->expired_at) : '长期有效',
                             $user->plan ? $user->plan->name : '无订阅',
                             Helper::getSubscribeUrl($user->token)
@@ -648,6 +651,8 @@ class UserController extends Controller
 
         $builder->chunk($chunkSize, function ($users) use ($subject, $content, $appName, $appUrl) {
             foreach ($users as $user) {
+                $transferEnable = (int) ($user->transfer_enable ?? 0);
+                $transferUsed = (int) (($user->u ?? 0) + ($user->d ?? 0));
                 $vars = [
                     'app.name' => $appName,
                     'app.url' => $appUrl,
@@ -657,9 +662,10 @@ class UserController extends Controller
                     'user.uuid' => $user->uuid,
                     'user.plan_name' => optional($user->plan)->name ?? '',
                     'user.expired_at' => $user->expired_at ? date('Y-m-d H:i:s', $user->expired_at) : '',
-                    'user.transfer_enable' => (int) ($user->transfer_enable ?? 0),
-                    'user.transfer_used' => (int) (($user->u ?? 0) + ($user->d ?? 0)),
-                    'user.transfer_left' => (int) (($user->transfer_enable ?? 0) - (($user->u ?? 0) + ($user->d ?? 0))),
+                    'user.transfer_enable' => $transferEnable,
+                    'user.transfer_used' => $transferUsed,
+                    // 0 is the API/template marker for unlimited traffic.
+                    'user.transfer_left' => $transferEnable === 0 ? 0 : max(0, $transferEnable - $transferUsed),
                 ];
 
                 $templateValue = [

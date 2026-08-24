@@ -17,10 +17,7 @@ class InternalPreviewNodeSeeder extends Seeder
             throw new RuntimeException('Preview nodes may only be seeded in local internal-free mode.');
         }
 
-        $group = ServerGroup::query()->firstOrCreate(
-            ['name' => 'Engineering'],
-            ['transfer_enable' => 500 * 1024 * 1024 * 1024],
-        );
+        $group = ServerGroup::query()->firstOrCreate(['name' => 'Engineering']);
 
         User::query()->updateOrCreate(
             ['email' => 'preview@example.com'],
@@ -29,7 +26,7 @@ class InternalPreviewNodeSeeder extends Seeder
                 'uuid' => '11111111-1111-4111-8111-111111111111',
                 'token' => hash('md5', 'preview@example.com'),
                 'group_id' => $group->id,
-                'transfer_enable' => 500 * 1024 * 1024 * 1024,
+                'transfer_enable' => 0,
                 'expired_at' => null,
                 'banned' => false,
             ],
@@ -42,7 +39,7 @@ class InternalPreviewNodeSeeder extends Seeder
                 'uuid' => '22222222-2222-4222-8222-222222222222',
                 'token' => hash('md5', 'admin@example.com'),
                 'group_id' => $group->id,
-                'transfer_enable' => 500 * 1024 * 1024 * 1024,
+                'transfer_enable' => 0,
                 'expired_at' => null,
                 'banned' => false,
                 'is_admin' => true,

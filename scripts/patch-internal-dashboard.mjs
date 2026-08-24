@@ -21,7 +21,8 @@ InternalTechDashboard=zn({__name:"InternalTechDashboard",setup(){
   const extractNodes=e=>Array.isArray(e)?e:Array.isArray(null==e?void 0:e.data)?e.data:Array.isArray(null==e||null==e.data?void 0:e.data.data)?e.data.data:[];
   const displayName=e=>{const t=String(e||"Colleague").split("@")[0].replace(/[._-]+/g," ");return t.replace(/\b[a-z]/g,(e=>e.toUpperCase()))};
   const greeting=()=>{const e=(new Date).getHours();return e<11?"早上好":e<13?"中午好":e<18?"下午好":"你好"};
-  const quota=e=>{const t=Number(e||0)/1073741824;return t>=1024?(t/1024).toFixed(t%1024===0?0:1)+" TB":t.toFixed(t%1===0?0:1)+" GB"};
+  const traffic=e=>{const t=Number(e||0)/1073741824;return t>=1024?(t/1024).toFixed(t%1024===0?0:1)+" TB":t.toFixed(t%1===0?0:1)+" GB"};
+  const quota=e=>Number(e||0)<=0?"无限":traffic(e);
   function copySubscription(){return v(this,null,(function*(){copying.value=!0;try{if(!profile.value.subscribe_url){const e=yield EN.get("/user/getSubscribe");profile.value=(null==e?void 0:e.data)||{}}profile.value.subscribe_url&&Xf(profile.value.subscribe_url)}finally{copying.value=!1}}))}
   function load(){return v(this,null,(function*(){loading.value=!0;try{const[e,t,n]=yield Promise.all([EN.get("/user/getSubscribe"),ON(),EN.get("/user/notice/fetch")]);profile.value=(null==e?void 0:e.data)||{},nodes.value=extractNodes(t),notices.value=Array.isArray(null==n?void 0:n.data)?n.data:[]}finally{loading.value=!1}}))}
   const shiftNotice=e=>{const t=notices.value.length;t&&(noticeIndex.value=(noticeIndex.value+e+t)%t)};
@@ -75,8 +76,8 @@ InternalTechDashboard=zn({__name:"InternalTechDashboard",setup(){
             li("div",{class:"overview-list"},[
               li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"部门身份组"),li("span",{class:"overview-value"},t.name||"未分组")]),
               li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"可用节点"),li("span",{class:"overview-value"},nodes.value.length+" 个")]),
-              li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"有效流量额度"),li("span",{class:"overview-value"},quota(r))]),
-              li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"本期已使用"),li("span",{class:"overview-value"},i+"%")])
+              li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"用户可用流量"),li("span",{class:"overview-value"},quota(r))]),
+              li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"本期已使用"),li("span",{class:"overview-value"},traffic(o))])
             ]),
             li("div",{class:"usage-track"},[li("div",{class:"usage-bar",style:"width:"+i+"%"})])
           ])
@@ -118,6 +119,20 @@ InternalTechDashboard=zn({__name:"InternalTechDashboard",setup(){
 } else {
   console.log(`Already patched ${bundlePath}`);
 }
+
+bundle = readFileSync(bundlePath, 'utf8');
+const unlimitedDashboardReplacements = [
+  [
+    'const quota=e=>{const t=Number(e||0)/1073741824;return t>=1024?(t/1024).toFixed(t%1024===0?0:1)+" TB":t.toFixed(t%1===0?0:1)+" GB"};',
+    'const traffic=e=>{const t=Number(e||0)/1073741824;return t>=1024?(t/1024).toFixed(t%1024===0?0:1)+" TB":t.toFixed(t%1===0?0:1)+" GB"};const quota=e=>Number(e||0)<=0?"无限":traffic(e);',
+  ],
+  ['"有效流量额度"),li("span",{class:"overview-value"},quota(r))', '"用户可用流量"),li("span",{class:"overview-value"},quota(r))'],
+  ['"本期已使用"),li("span",{class:"overview-value"},i+"%")', '"本期已使用"),li("span",{class:"overview-value"},traffic(o))'],
+];
+for (const [search, replacement] of unlimitedDashboardReplacements) {
+  bundle = bundle.replace(search, replacement);
+}
+writeFileSync(bundlePath, bundle);
 
 bundle = readFileSync(bundlePath, 'utf8');
 if (!bundle.includes('__name:"InternalNodeStatus"')) {

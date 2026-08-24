@@ -217,39 +217,47 @@ writeFileSync(userPath, user);
 const adminPath = resolve(root, 'public/assets/admin/assets/index-CEIYH7i8.js');
 let admin = readFileSync(adminPath, 'utf8');
 
-// Repair bundles produced by the first internal-access patch revision.
-const brokenGroupTrafficFieldEnd = 'children:"与个人额度取较大值作为最终额度"}),Q.jsx(Qy,{})]}))';
-if (admin.includes(brokenGroupTrafficFieldEnd)) {
-  admin = admin.replace(
-    brokenGroupTrafficFieldEnd,
-    'children:"与个人额度取较大值作为最终额度"}),Q.jsx(Qy,{})]})})',
+// Identity groups only grant node access. Remove traffic controls from bundles
+// produced by the earlier internal-access patch.
+admin = admin.replace(',transfer_enable_gb:yy().min(0).default(0)', '');
+admin = admin.replace(',transfer_enable_gb:0', '');
+if (admin.includes('control:s.control,name:"transfer_enable_gb"')) {
+  admin = removeCallContaining(
+    admin,
+    'control:s.control,name:"transfer_enable_gb"',
+    'Q.jsx($y,',
+    'legacy group traffic field',
   );
-  writeFileSync(adminPath, admin);
+}
+const legacyGroupTrafficColumn = '{accessorKey:"transfer_enable",header:({column:e})=>Q.jsx(eQt,{column:e,title:"组流量"})';
+if (admin.includes(legacyGroupTrafficColumn)) {
+  admin = removeBalanced(admin, legacyGroupTrafficColumn, '{', '}', 'legacy group traffic column');
 }
 
-if (!admin.includes('组流量（GB）')) {
-  admin = replaceOnce(
-    admin,
-    'e("messages.nameValidation.pattern"))});function c4t({refetch:e,dialogTrigger:t,defaultValues:n={name:""}',
-    'e("messages.nameValidation.pattern")),transfer_enable_gb:yy().min(0).default(0)});function c4t({refetch:e,dialogTrigger:t,defaultValues:n={name:"",transfer_enable_gb:0}',
-    'group traffic schema',
-  );
-
-  const groupField = extractCall(admin, 'Q.jsx($y,{control:s.control,name:"name"');
-  const groupTrafficField = 'Q.jsx($y,{control:s.control,name:"transfer_enable_gb",render:({field:e})=>Q.jsxs(Gy,{children:[Q.jsx(Zy,{className:"font-mono text-[11px] text-muted-foreground",children:"组流量（GB）"}),Q.jsx(Yy,{children:Q.jsx(u8e,{type:"number",min:0,step:"any",value:e.value??0,onChange:t=>e.onChange(Number(t.target.value)),placeholder:"0 表示仅使用个人额度",className:"w-full font-mono text-xs"})}),Q.jsx(Xy,{className:"font-mono text-[10px] opacity-70",children:"与个人额度取较大值作为最终额度"}),Q.jsx(Qy,{})]})})';
-  admin = admin.slice(0, groupField.start)
-    + `Q.jsxs(Q.Fragment,{children:[${groupField.text},${groupTrafficField}]})`
-    + admin.slice(groupField.end);
-
-  const groupColumnsStart = admin.indexOf('H3t=(e,t)=>[');
-  const usersColumnStart = admin.indexOf('{accessorKey:"users_count"', groupColumnsStart);
-  if (groupColumnsStart < 0 || usersColumnStart < 0) {
-    throw new Error('group traffic column: insertion point not found');
+// Internal VPN mode manages nodes directly. Remove machine/plugin management
+// navigation and routes, and keep the sidebar from requesting plugin metadata.
+for (const [marker, label] of [
+  ['{id:"plugin-management"', 'plugin navigation'],
+  ['{id:"theme-config"', 'theme configuration navigation'],
+  ['{id:"machine-management"', 'machine navigation'],
+  ['{path:"plugin",lazy', 'plugin management route'],
+  ['{path:"plugin/menu-demo",lazy', 'plugin menu demo route'],
+  ['{path:"plugin/crud-demo",lazy', 'plugin crud demo route'],
+  ['{path:"theme",lazy', 'theme configuration route'],
+  ['{path:"plugins/:pluginCode/*",lazy', 'dynamic plugin route'],
+  ['{path:"machine",lazy', 'machine management route'],
+]) {
+  if (admin.includes(marker)) {
+    admin = removeBalanced(admin, marker, '{', '}', label);
   }
-  admin = admin.slice(0, usersColumnStart)
-    + '{accessorKey:"transfer_enable",header:({column:e})=>Q.jsx(eQt,{column:e,title:"组流量"}),cell:({row:e})=>Q.jsx("div",{className:"font-medium",children:RS(e.original.transfer_enable||0)})},'
-    + admin.slice(usersColumnStart);
+}
 
+admin = admin.replace(
+  'function Qlt(){const{data:e}=Ult();return H.useMemo(()=>{const t=Vlt.map(e=>({...e,sub:e.sub?.map(e=>({...e}))}));return[...t,...Zlt(e??[])]},[e])}',
+  'function Qlt(){return H.useMemo(()=>Vlt.map(e=>({...e,sub:e.sub?.map(e=>({...e}))})),[])}',
+);
+
+if (!admin.includes('group_id:dy().nullable().default(null)')) {
   admin = removeBalanced(admin, '{id:"dashboard"', '{', '}', 'dashboard navigation');
   admin = removeBalanced(admin, '{id:"payment-config"', '{', '}', 'payment navigation');
   admin = removeBalanced(admin, '{id:"subscription-management"', '{', '}', 'finance navigation');
@@ -334,3 +342,13 @@ if (!admin.includes('组流量（GB）')) {
 } else {
   console.log(`Already patched ${adminPath}`);
 }
+
+admin = admin.replace(
+  'Q.jsx(Zy,{children:e("edit.form.total_traffic")})',
+  'Q.jsx(Zy,{children:"用户可用流量（GB）"})',
+);
+admin = admin.replace(
+  'Q.jsx(u8e,{type:"number",value:t.value/1024/1024/1024||"",onChange:e=>t.onChange(1024*parseInt(e.target.value)*1024*1024),placeholder:e("edit.form.total_traffic_placeholder"),className:"rounded-r-none"})',
+  'Q.jsx(u8e,{type:"number",min:0,step:"any",value:0===t.value?0:t.value/1024/1024/1024||"",onChange:e=>t.onChange(1073741824*Number(e.target.value||0)),placeholder:"0 表示无限流量",className:"rounded-r-none"})',
+);
+writeFileSync(adminPath, admin);

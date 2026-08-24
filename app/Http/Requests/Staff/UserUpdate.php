@@ -16,7 +16,7 @@ class UserUpdate extends FormRequest
         return [
             'email' => 'required|email:strict',
             'password' => 'nullable',
-            'transfer_enable' => 'numeric',
+            'transfer_enable' => 'numeric|min:0',
             'expired_at' => 'nullable|integer',
             'banned' => 'required|in:0,1',
             'plan_id' => 'nullable|integer',

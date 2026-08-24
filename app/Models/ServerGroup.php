@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
  *
  * @property int $id
  * @property string $name 分组名
- * @property int $transfer_enable 分组流量额度（字节）
  * @property int $created_at
  * @property int $updated_at
  * @property-read int $server_count 服务器数量
@@ -21,7 +20,6 @@ class ServerGroup extends Model
     protected $table = 'v2_server_group';
     protected $dateFormat = 'U';
     protected $casts = [
-        'transfer_enable' => 'integer',
         'created_at' => 'timestamp',
         'updated_at' => 'timestamp'
     ];

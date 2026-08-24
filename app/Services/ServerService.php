@@ -94,14 +94,11 @@ class ServerService
             return collect();
         }
         $users = User::toBase()
-            ->leftJoin('v2_server_group', 'v2_server_group.id', '=', 'v2_user.group_id')
             ->whereIn('v2_user.group_id', $groupIds)
-            ->whereRaw('(v2_user.u + v2_user.d) < CASE
-                WHEN v2_server_group.transfer_enable IS NULL
-                    OR v2_user.transfer_enable >= v2_server_group.transfer_enable
-                THEN v2_user.transfer_enable
-                ELSE v2_server_group.transfer_enable
-            END')
+            ->where(function ($query) {
+                $query->where('v2_user.transfer_enable', 0)
+                    ->orWhereRaw('(v2_user.u + v2_user.d) < v2_user.transfer_enable');
+            })
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
                     ->orWhere('expired_at', NULL);

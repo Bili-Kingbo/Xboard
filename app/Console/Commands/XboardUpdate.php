@@ -44,9 +44,11 @@ class XboardUpdate extends Command
         $this->info('正在导入数据库请稍等...');
         Artisan::call("migrate", ['--force' => true]);
         $this->info(Artisan::output());
-        $this->info('正在检查并安装默认插件...');
-        PluginManager::installDefaultPlugins();
-        $this->info('默认插件检查完成');
+        if (!config('app.internal_free_mode')) {
+            $this->info('正在检查并安装默认插件...');
+            PluginManager::installDefaultPlugins();
+            $this->info('默认插件检查完成');
+        }
         $updateService = new UpdateService();
         $updateService->updateVersionCache();
         $themeService = app(ThemeService::class);

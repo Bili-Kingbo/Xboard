@@ -25,7 +25,9 @@ class Shadowsocks extends AbstractProtocol
         $subs['bytes_remaining'] = '';
 
         $bytesUsed = $user['u'] + $user['d'];
-        $bytesRemaining = $user['transfer_enable'] - $bytesUsed;
+        $bytesRemaining = $user['transfer_enable'] > 0
+            ? max(0, $user['transfer_enable'] - $bytesUsed)
+            : 0;
 
         foreach ($servers as $item) {
             if (

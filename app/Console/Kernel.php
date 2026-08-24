@@ -48,7 +48,9 @@ class Kernel extends ConsoleKernel
         // if (env('ENABLE_AUTO_BACKUP_AND_UPDATE', false)) {
         //     $schedule->command('backup:database', ['true'])->daily()->onOneServer();
         // }
-        app(PluginManager::class)->registerPluginSchedules($schedule);
+        if (!config('app.internal_free_mode')) {
+            app(PluginManager::class)->registerPluginSchedules($schedule);
+        }
 
     }
 
@@ -61,9 +63,11 @@ class Kernel extends ConsoleKernel
     {
         $this->load(__DIR__ . '/Commands');
 
-        try {
-            app(PluginManager::class)->initializeEnabledPlugins();
-        } catch (\Exception $e) {
+        if (!config('app.internal_free_mode')) {
+            try {
+                app(PluginManager::class)->initializeEnabledPlugins();
+            } catch (\Exception $e) {
+            }
         }
         require base_path('routes/console.php');
     }

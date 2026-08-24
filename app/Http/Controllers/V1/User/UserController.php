@@ -111,11 +111,10 @@ class UserController extends Controller
         if (!$user) {
             return $this->fail([400, __('The user does not exist')]);
         }
-        $user->load('group:id,name,transfer_enable');
-        $personalTransfer = (int) $user->transfer_enable;
-        $user['personal_transfer_enable'] = $personalTransfer;
-        $user['group_transfer_enable'] = $user->getGroupTransferEnable();
+        $user->load('group:id,name');
+        $user['personal_transfer_enable'] = (int) $user->transfer_enable;
         $user['transfer_enable'] = $user->getEffectiveTransferEnable();
+        $user['unlimited_traffic'] = $user->hasUnlimitedTraffic();
         $user['avatar_url'] = 'https://cdn.v2ex.com/gravatar/' . md5($user->email) . '?s=64&d=identicon';
 
         if (config('app.internal_free_mode')) {
@@ -166,11 +165,10 @@ class UserController extends Controller
                 return $this->fail([400, __('Subscription plan does not exist')]);
             }
         }
-        $user->load('group:id,name,transfer_enable');
-        $personalTransfer = (int) $user->transfer_enable;
-        $user['personal_transfer_enable'] = $personalTransfer;
-        $user['group_transfer_enable'] = $user->getGroupTransferEnable();
+        $user->load('group:id,name');
+        $user['personal_transfer_enable'] = (int) $user->transfer_enable;
         $user['transfer_enable'] = $user->getEffectiveTransferEnable();
+        $user['unlimited_traffic'] = $user->hasUnlimitedTraffic();
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
         $userService = new UserService();
         $user['reset_day'] = $userService->getResetDay($user);
