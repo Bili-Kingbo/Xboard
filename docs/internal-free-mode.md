@@ -62,6 +62,14 @@ When internal free mode is enabled:
 - Administrators can enable a daily traffic reset under node settings. When
   enabled, used traffic is cleared once per day at 00:00 in `Asia/Shanghai`,
   with a persistent date marker preventing duplicate resets.
+- Special-node import accepts remote subscriptions, Clash Meta YAML/JSON,
+  Base64 subscriptions, and share links for every protocol that the panel can
+  deliver through the default Clash Meta subscription: Shadowsocks, VMess,
+  VLESS, Trojan, Hysteria 1/2, TUIC, AnyTLS, SOCKS, HTTP, Naive, and Mieru.
+  Imported client fields are stored statically and merged into subscriptions
+  without involving Xboard Node. External nodes remain in the independent
+  `v2_special_server` table and never enter the native `v2_server` lifecycle,
+  health checks, traffic accounting, deployment, or user-sync flows.
 - If upstream user/admin bundles are refreshed, run both patch scripts:
 
 ```bash

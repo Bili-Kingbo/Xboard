@@ -12,7 +12,8 @@ class SpecialNodeImportService
     private const MAX_SOURCE_BYTES = 2_000_000;
     private const MAX_NODES = 500;
     private const SUPPORTED_TYPES = [
-        'ss', 'vmess', 'vless', 'trojan', 'hysteria2', 'tuic', 'socks5', 'http', 'anytls',
+        'ss', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'tuic', 'anytls',
+        'socks5', 'http', 'naive', 'mieru',
     ];
 
     /**
@@ -33,7 +34,7 @@ class SpecialNodeImportService
 
         $sourceType = 'content';
         $sourceLabel = null;
-        if ($this->isHttpUrl($source)) {
+        if ($this->isHttpUrl($source) && !$this->isHttpProxyShareLink($source)) {
             $sourceType = 'url';
             $sourceLabel = parse_url($source, PHP_URL_HOST) ?: null;
             $source = $this->fetchRemote($source);
@@ -97,13 +98,20 @@ class SpecialNodeImportService
             if ($line === '' || str_starts_with($line, '#')) {
                 continue;
             }
-            $proxy = match (true) {
-                str_starts_with($line, 'vmess://') => $this->parseVmess($line),
-                str_starts_with($line, 'vless://') => $this->parseUrlProxy($line, 'vless'),
-                str_starts_with($line, 'trojan://') => $this->parseUrlProxy($line, 'trojan'),
-                str_starts_with($line, 'hysteria2://'), str_starts_with($line, 'hy2://') => $this->parseUrlProxy($line, 'hysteria2'),
-                str_starts_with($line, 'tuic://') => $this->parseUrlProxy($line, 'tuic'),
-                str_starts_with($line, 'ss://') => $this->parseShadowsocks($line),
+            $scheme = strtolower((string) parse_url($line, PHP_URL_SCHEME));
+            $proxy = match ($scheme) {
+                'vmess' => $this->parseVmess($line),
+                'vless' => $this->parseUrlProxy($line, 'vless'),
+                'trojan' => $this->parseUrlProxy($line, 'trojan'),
+                'hysteria2', 'hy2' => $this->parseUrlProxy($line, 'hysteria2'),
+                'hysteria' => $this->parseUrlProxy($line, 'hysteria'),
+                'tuic' => $this->parseUrlProxy($line, 'tuic'),
+                'anytls' => $this->parseUrlProxy($line, 'anytls'),
+                'socks', 'socks5' => $this->parseUrlProxy($line, 'socks5'),
+                'http', 'https' => $this->parseUrlProxy($line, 'http'),
+                'naive', 'naive+https' => $this->parseUrlProxy($line, 'naive'),
+                'mierus' => $this->parseMieruSimple($line),
+                'ss' => $this->parseShadowsocks($line),
                 default => null,
             };
             if ($proxy !== null) {
@@ -148,6 +156,16 @@ class SpecialNodeImportService
         }
         if (!empty($data['sni'])) {
             $proxy['servername'] = $data['sni'];
+        }
+        if (!empty($data['fp'])) {
+            $proxy['client-fingerprint'] = $data['fp'];
+        }
+        if (($data['security'] ?? '') === 'reality' && !empty($data['pbk'])) {
+            $proxy['tls'] = true;
+            $proxy['reality-opts'] = array_filter([
+                'public-key' => $data['pbk'],
+                'short-id' => $data['sid'] ?? null,
+            ]);
         }
         if (($data['net'] ?? null) === 'ws') {
             $proxy['ws-opts'] = [
@@ -200,10 +218,28 @@ class SpecialNodeImportService
         } elseif ($type === 'trojan') {
             $proxy['password'] = $user;
             $proxy['sni'] = $query['sni'] ?? $query['peer'] ?? null;
+            if (($query['security'] ?? '') === 'reality') {
+                $proxy['reality-opts'] = array_filter([
+                    'public-key' => $query['pbk'] ?? null,
+                    'short-id' => $query['sid'] ?? null,
+                ]);
+            }
             $this->applyCommonUrlOptions($proxy, $query, $query['type'] ?? 'tcp');
+        } elseif ($type === 'hysteria') {
+            $proxy['auth-str'] = $query['auth'] ?? $user;
+            $proxy['sni'] = $query['sni'] ?? null;
+            $proxy['protocol'] = $query['protocol'] ?? 'udp';
+            $proxy['up'] = $query['upmbps'] ?? $query['up'] ?? null;
+            $proxy['down'] = $query['downmbps'] ?? $query['down'] ?? null;
+            $proxy['obfs'] = $query['obfsParam'] ?? $query['obfs'] ?? null;
+            if ($this->isTruthy($query['insecure'] ?? $query['allowInsecure'] ?? false)) {
+                $proxy['skip-cert-verify'] = true;
+            }
         } elseif ($type === 'hysteria2') {
             $proxy['password'] = $user;
             $proxy['sni'] = $query['sni'] ?? null;
+            $proxy['ports'] = $query['mport'] ?? $query['ports'] ?? null;
+            $proxy['hop-interval'] = isset($query['hop-interval']) ? (int) $query['hop-interval'] : null;
             if (!empty($query['obfs'])) {
                 $proxy['obfs'] = $query['obfs'];
                 $proxy['obfs-password'] = $query['obfs-password'] ?? $query['obfsPassword'] ?? null;
@@ -218,6 +254,37 @@ class SpecialNodeImportService
             $proxy['congestion-controller'] = $query['congestion_control'] ?? $query['congestion-controller'] ?? 'bbr';
             if ($this->isTruthy($query['allow_insecure'] ?? $query['insecure'] ?? false)) {
                 $proxy['skip-cert-verify'] = true;
+            }
+            if (!empty($query['alpn'])) {
+                $proxy['alpn'] = array_values(array_filter(array_map('trim', explode(',', $query['alpn']))));
+            }
+        } elseif ($type === 'anytls') {
+            $proxy['password'] = $user;
+            $proxy['sni'] = $query['sni'] ?? null;
+            $proxy['client-fingerprint'] = $query['fp'] ?? $query['client-fingerprint'] ?? null;
+            if ($this->isTruthy($query['insecure'] ?? $query['allowInsecure'] ?? false)) {
+                $proxy['skip-cert-verify'] = true;
+            }
+            if (!empty($query['alpn'])) {
+                $proxy['alpn'] = array_values(array_filter(array_map('trim', explode(',', $query['alpn']))));
+            }
+            if (($query['security'] ?? '') === 'reality') {
+                $proxy['reality-opts'] = array_filter([
+                    'public-key' => $query['pbk'] ?? null,
+                    'short-id' => $query['sid'] ?? null,
+                ]);
+            }
+        } elseif (in_array($type, ['socks5', 'http', 'naive'], true)) {
+            [$username, $credentialPassword] = $this->parseUrlCredentials($parts);
+            $proxy['username'] = $username;
+            $proxy['password'] = $credentialPassword;
+            if ($type === 'http') {
+                $proxy['tls'] = strtolower((string) ($parts['scheme'] ?? '')) === 'https'
+                    || ($query['security'] ?? '') === 'tls';
+                $proxy['sni'] = $query['sni'] ?? null;
+                if ($this->isTruthy($query['allowInsecure'] ?? $query['insecure'] ?? false)) {
+                    $proxy['skip-cert-verify'] = true;
+                }
             }
         }
 
@@ -252,7 +319,7 @@ class SpecialNodeImportService
     {
         $withoutScheme = substr($uri, 5);
         [$body, $fragment] = array_pad(explode('#', $withoutScheme, 2), 2, '');
-        [$body] = explode('?', $body, 2);
+        [$body, $queryString] = array_pad(explode('?', $body, 2), 2, '');
         if (!str_contains($body, '@')) {
             $decoded = $this->decodeBase64($body);
             if ($decoded === null) {
@@ -270,7 +337,8 @@ class SpecialNodeImportService
         if (!$cipher || !$password || !is_array($endpointParts) || empty($endpointParts['host']) || empty($endpointParts['port'])) {
             return null;
         }
-        return [
+        parse_str($queryString, $query);
+        $proxy = [
             'name' => rawurldecode($fragment) ?: 'SS 特殊节点',
             'type' => 'ss',
             'server' => $endpointParts['host'],
@@ -279,6 +347,73 @@ class SpecialNodeImportService
             'password' => rawurldecode($password),
             'udp' => true,
         ];
+        if (!empty($query['plugin'])) {
+            [$plugin, $pluginOpts] = array_pad(explode(';', rawurldecode($query['plugin']), 2), 2, '');
+            $proxy['plugin'] = $plugin;
+            if ($pluginOpts !== '') {
+                $proxy['plugin-opts'] = $pluginOpts;
+            }
+        }
+        return $proxy;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function parseMieruSimple(string $uri): ?array
+    {
+        $parts = parse_url($uri);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return null;
+        }
+        [$username, $password] = $this->parseUrlCredentials($parts);
+        if ($username === '' || $password === '') {
+            return null;
+        }
+
+        $pairs = [];
+        foreach (explode('&', (string) ($parts['query'] ?? '')) as $pair) {
+            [$key, $value] = array_pad(explode('=', $pair, 2), 2, '');
+            $pairs[rawurldecode($key)][] = rawurldecode($value);
+        }
+        $ports = $pairs['port'] ?? [];
+        $protocols = $pairs['protocol'] ?? [];
+        $selected = null;
+        $selectedIndex = null;
+        foreach ($ports as $index => $port) {
+            if (strtoupper($protocols[$index] ?? 'TCP') === 'TCP') {
+                $selected = $port;
+                $selectedIndex = $index;
+                break;
+            }
+        }
+        if ($selected === null) {
+            $selected = $ports[0] ?? null;
+            $selectedIndex = $selected === null ? null : 0;
+        }
+        if (!is_string($selected) || preg_match('/^\d+(?:-\d+)?$/', $selected) !== 1) {
+            return null;
+        }
+
+        $proxy = [
+            'name' => rawurldecode($parts['fragment'] ?? '') ?: 'Mieru 特殊节点',
+            'type' => 'mieru',
+            'server' => $parts['host'],
+            'transport' => strtoupper($protocols[$selectedIndex] ?? 'TCP'),
+            'username' => $username,
+            'password' => $password,
+            'multiplexing' => $pairs['multiplexing'][0] ?? 'MULTIPLEXING_LOW',
+        ];
+        if (str_contains($selected, '-')) {
+            $proxy['port-range'] = $selected;
+        } else {
+            $proxy['port'] = (int) $selected;
+        }
+        foreach (['handshake-mode' => 'handshake-mode', 'traffic-pattern' => 'traffic-pattern'] as $queryKey => $proxyKey) {
+            if (!empty($pairs[$queryKey][0])) {
+                $proxy[$proxyKey] = $pairs[$queryKey][0];
+            }
+        }
+
+        return $proxy;
     }
 
     /** @param array<int, mixed> $items @return array<int, array<string, mixed>> */
@@ -292,7 +427,7 @@ class SpecialNodeImportService
             $type = strtolower((string) ($item['type'] ?? ''));
             if ($type === 'shadowsocks') {
                 $type = 'ss';
-            } elseif ($type === 'hy2' || $type === 'hysteria') {
+            } elseif ($type === 'hy2') {
                 $type = 'hysteria2';
             } elseif ($type === 'socks') {
                 $type = 'socks5';
@@ -300,13 +435,18 @@ class SpecialNodeImportService
             $name = trim((string) ($item['name'] ?? ''));
             $server = trim((string) ($item['server'] ?? ''));
             $port = filter_var($item['port'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
-            if (!in_array($type, self::SUPPORTED_TYPES, true) || $name === '' || $server === '' || $port === false) {
+            $hasPortRange = $type === 'mieru' && $this->isValidPortRange((string) ($item['port-range'] ?? ''));
+            if (!in_array($type, self::SUPPORTED_TYPES, true) || $name === '' || $server === '' || ($port === false && !$hasPortRange)) {
                 continue;
             }
             $item['type'] = $type;
             $item['name'] = mb_substr($name, 0, 120);
             $item['server'] = $server;
-            $item['port'] = (int) $port;
+            if ($port !== false) {
+                $item['port'] = (int) $port;
+            } else {
+                unset($item['port']);
+            }
             $result[] = $this->sanitizeValue($item);
         }
         return $result;
@@ -387,6 +527,37 @@ class SpecialNodeImportService
     private function isHttpUrl(string $value): bool
     {
         return preg_match('#^https?://\S+$#i', $value) === 1;
+    }
+
+    private function isHttpProxyShareLink(string $value): bool
+    {
+        $parts = parse_url($value);
+        return is_array($parts)
+            && isset($parts['user'], $parts['host'], $parts['port'], $parts['fragment']);
+    }
+
+    /** @param array<string, mixed> $parts @return array{string, string} */
+    private function parseUrlCredentials(array $parts): array
+    {
+        $username = rawurldecode((string) ($parts['user'] ?? ''));
+        $password = rawurldecode((string) ($parts['pass'] ?? ''));
+        if ($password === '') {
+            $decoded = $this->decodeBase64($username);
+            if ($decoded !== null && str_contains($decoded, ':')) {
+                [$username, $password] = array_pad(explode(':', $decoded, 2), 2, '');
+            }
+        }
+        return [$username, $password];
+    }
+
+    private function isValidPortRange(string $value): bool
+    {
+        if (preg_match('/^(\d+)-(\d+)$/', $value, $matches) !== 1) {
+            return false;
+        }
+        $start = (int) $matches[1];
+        $end = (int) $matches[2];
+        return $start >= 1 && $end <= 65535 && $start <= $end;
     }
 
     private function decodeBase64(string $value): ?string

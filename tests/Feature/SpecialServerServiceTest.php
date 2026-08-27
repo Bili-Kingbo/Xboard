@@ -2,18 +2,43 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\V2\Admin\Server\ManageController;
+use App\Models\Server;
+use App\Models\ServerGroup;
 use App\Models\SpecialServer;
 use App\Models\SubscribeTemplate;
 use App\Models\User;
 use App\Protocols\ClashMeta;
+use App\Services\SpecialNodeImportService;
 use App\Services\SpecialServerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 use Symfony\Component\Yaml\Yaml;
 
 class SpecialServerServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_external_import_never_creates_a_native_server(): void
+    {
+        $group = ServerGroup::forceCreate(['name' => 'External delivery']);
+        $request = Request::create('/server/manage/importSpecial', 'POST', [
+            'source' => 'anytls://external-password@203.0.113.10:443/'
+                . '?security=reality&sni=addons.mozilla.org&fp=chrome&pbk=public-key&sid=0123456789abcdef'
+                . '#External%20AnyTLS',
+            'group_ids' => [$group->id],
+            'tags' => ['external'],
+            'show' => true,
+        ]);
+
+        app(ManageController::class)->importSpecial($request, app(SpecialNodeImportService::class));
+
+        $this->assertSame(0, Server::query()->count());
+        $this->assertSame(1, SpecialServer::query()->count());
+        $this->assertSame('anytls', SpecialServer::query()->value('type'));
+        $this->assertSame('public-key', SpecialServer::query()->firstOrFail()->proxy_payload['reality-opts']['public-key']);
+    }
 
     public function test_it_only_returns_visible_special_nodes_for_the_users_group(): void
     {
