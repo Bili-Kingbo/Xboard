@@ -66,6 +66,9 @@ When internal free mode is enabled:
   Base64 subscriptions, and share links for every protocol that the panel can
   deliver through the default Clash Meta subscription: Shadowsocks, VMess,
   VLESS, Trojan, Hysteria 1/2, TUIC, AnyTLS, SOCKS, HTTP, Naive, and Mieru.
+  VLESS accepts both the standard URI authority and Shadowrocket's Base64
+  authority form, including `remarks`, `peer`, XTLS, Reality, and fingerprint
+  parameters.
   Imported client fields are stored statically and merged into subscriptions
   without involving Xboard Node. External nodes remain in the independent
   `v2_special_server` table and never enter the native `v2_server` lifecycle,

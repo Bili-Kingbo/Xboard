@@ -179,12 +179,14 @@ class SpecialNodeImportService
     /** @return array<string, mixed>|null */
     private function parseUrlProxy(string $uri, string $type): ?array
     {
-        $parts = parse_url($uri);
+        $parts = $this->parseUrlParts($uri, $type);
         if (!is_array($parts) || empty($parts['host']) || empty($parts['port'])) {
             return null;
         }
         parse_str($parts['query'] ?? '', $query);
-        $name = rawurldecode($parts['fragment'] ?? '') ?: strtoupper($type) . ' 特殊节点';
+        $name = rawurldecode((string) ($parts['fragment'] ?? ''))
+            ?: rawurldecode((string) ($query['remarks'] ?? $query['remark'] ?? $query['tag'] ?? ''))
+            ?: strtoupper($type) . ' 特殊节点';
         $user = rawurldecode($parts['user'] ?? '');
         $password = rawurldecode($parts['pass'] ?? '');
 
@@ -195,6 +197,9 @@ class SpecialNodeImportService
             'port' => (int) $parts['port'],
             'udp' => true,
         ];
+        if (array_key_exists('udp', $query)) {
+            $proxy['udp'] = $this->isTruthy($query['udp']);
+        }
 
         if ($type === 'vless') {
             $proxy['uuid'] = $user;
@@ -202,9 +207,10 @@ class SpecialNodeImportService
             if ($network !== 'tcp') {
                 $proxy['network'] = $network;
             }
-            if (($query['security'] ?? '') === 'tls') {
+            if (($query['security'] ?? '') === 'tls' || $this->isTruthy($query['tls'] ?? false)) {
                 $proxy['tls'] = true;
-            } elseif (($query['security'] ?? '') === 'reality') {
+            }
+            if (($query['security'] ?? '') === 'reality' || !empty($query['pbk']) || !empty($query['sid'])) {
                 $proxy['tls'] = true;
                 $proxy['reality-opts'] = array_filter([
                     'public-key' => $query['pbk'] ?? null,
@@ -213,6 +219,12 @@ class SpecialNodeImportService
             }
             if (!empty($query['flow'])) {
                 $proxy['flow'] = $query['flow'];
+            } elseif (isset($query['xtls'])) {
+                $proxy['flow'] = match ((string) $query['xtls']) {
+                    '1' => 'xtls-rprx-direct',
+                    '2' => 'xtls-rprx-vision',
+                    default => null,
+                };
             }
             $this->applyCommonUrlOptions($proxy, $query, $network);
         } elseif ($type === 'trojan') {
@@ -294,12 +306,13 @@ class SpecialNodeImportService
     /** @param array<string, mixed> $proxy @param array<string, mixed> $query */
     private function applyCommonUrlOptions(array &$proxy, array $query, string $network): void
     {
-        $serverName = $query['sni'] ?? $query['servername'] ?? null;
+        $serverName = $query['sni'] ?? $query['servername'] ?? $query['peer'] ?? null;
         if ($serverName) {
             $proxy['servername'] = $serverName;
         }
-        if (!empty($query['fp'])) {
-            $proxy['client-fingerprint'] = $query['fp'];
+        $fingerprint = $query['fp'] ?? $query['fingerprint'] ?? null;
+        if ($fingerprint) {
+            $proxy['client-fingerprint'] = $fingerprint;
         }
         if ($this->isTruthy($query['allowInsecure'] ?? $query['insecure'] ?? false)) {
             $proxy['skip-cert-verify'] = true;
@@ -312,6 +325,48 @@ class SpecialNodeImportService
         } elseif ($network === 'grpc') {
             $proxy['grpc-opts'] = ['grpc-service-name' => $query['serviceName'] ?? $query['service_name'] ?? ''];
         }
+    }
+
+    /** @return array<string, mixed>|false */
+    private function parseUrlParts(string $uri, string $type): array|false
+    {
+        $parts = parse_url($uri);
+        if (is_array($parts) && !empty($parts['host']) && !empty($parts['port'])) {
+            return $parts;
+        }
+        if ($type !== 'vless') {
+            return $parts;
+        }
+
+        $schemeOffset = strpos($uri, '://');
+        if ($schemeOffset === false) {
+            return false;
+        }
+        $tail = substr($uri, $schemeOffset + 3);
+        $queryOffset = strcspn($tail, '?#');
+        $encodedAuthority = rtrim(substr($tail, 0, $queryOffset), '/');
+        if ($encodedAuthority === '' || str_contains($encodedAuthority, '@')) {
+            return $parts;
+        }
+        $decodedAuthority = $this->decodeBase64($encodedAuthority);
+        if ($decodedAuthority === null || !str_contains($decodedAuthority, '@')) {
+            return $parts;
+        }
+
+        [$credentials, $endpoint] = array_pad(explode('@', $decodedAuthority, 2), 2, '');
+        if (str_contains($credentials, ':')) {
+            [, $credentials] = array_pad(explode(':', $credentials, 2), 2, '');
+        }
+        $endpointParts = parse_url('tcp://' . $endpoint);
+        if ($credentials === '' || !is_array($endpointParts) || empty($endpointParts['host']) || empty($endpointParts['port'])) {
+            return $parts;
+        }
+
+        return array_merge(is_array($parts) ? $parts : [], [
+            'host' => $endpointParts['host'],
+            'port' => (int) $endpointParts['port'],
+            'user' => $credentials,
+        ]);
     }
 
     /** @return array<string, mixed>|null */

@@ -46,6 +46,29 @@ YAML);
         $this->assertTrue($proxy['tls']);
     }
 
+    public function test_it_imports_shadowrocket_vless_with_base64_authority(): void
+    {
+        $authority = base64_encode(':00000000-0000-0000-0000-000000000004@198.51.100.20:1002');
+        $result = (new SpecialNodeImportService())->parse(
+            "vless://{$authority}?remarks=External%20VLESS&tls=1&peer=hk.art.museum"
+            . '&udp=1&xtls=2&pbk=public-key&sid=20220701&fingerprint=chrome'
+        );
+
+        $this->assertCount(1, $result['proxies']);
+        $proxy = $result['proxies'][0];
+        $this->assertSame('External VLESS', $proxy['name']);
+        $this->assertSame('00000000-0000-0000-0000-000000000004', $proxy['uuid']);
+        $this->assertSame('198.51.100.20', $proxy['server']);
+        $this->assertSame(1002, $proxy['port']);
+        $this->assertTrue($proxy['tls']);
+        $this->assertTrue($proxy['udp']);
+        $this->assertSame('hk.art.museum', $proxy['servername']);
+        $this->assertSame('xtls-rprx-vision', $proxy['flow']);
+        $this->assertSame('public-key', $proxy['reality-opts']['public-key']);
+        $this->assertSame('20220701', $proxy['reality-opts']['short-id']);
+        $this->assertSame('chrome', $proxy['client-fingerprint']);
+    }
+
     public function test_it_imports_anytls_share_links_with_encoded_password(): void
     {
         $result = (new SpecialNodeImportService())->parse(
