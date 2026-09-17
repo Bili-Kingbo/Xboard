@@ -790,11 +790,28 @@
     }
     .n-data-table .n-data-table-th { color: var(--ink-muted) !important; background: var(--ink-paper-deep) !important; }
     .n-data-table .n-data-table-td { color: var(--ink-text) !important; background: var(--ink-surface) !important; }
-    .n-modal, .n-drawer-content, .n-dropdown-menu {
+    .n-modal, .n-drawer-content, .n-dropdown-menu,
+    .n-popover, .n-base-select-menu, .n-base-selection-menu, .n-tooltip {
+      --n-color: var(--ink-surface-solid) !important;
+      --n-arrow-color: var(--ink-surface-solid) !important;
+      --n-text-color: var(--ink-text) !important;
+      --n-option-text-color: var(--ink-text) !important;
+      --n-option-text-color-active: var(--ink-pine) !important;
+      --n-option-text-color-pending: var(--ink-pine) !important;
+      --n-option-color-active: var(--ink-pine-soft) !important;
+      --n-option-color-pending: var(--ink-pine-soft) !important;
+      --n-option-check-color: var(--ink-pine) !important;
+      --n-border-color: var(--ink-line-strong) !important;
+      --n-divider-color: var(--ink-line) !important;
       color: var(--ink-text) !important;
-      border-color: var(--ink-line) !important;
+      border-color: var(--ink-line-strong) !important;
       background: var(--ink-surface-solid) !important;
       box-shadow: 0 18px 50px var(--ink-shadow) !important;
+    }
+    /* The register form's verification-code row ships with a near-white
+       `bg-[--n-color-embedded]` utility; keep it on the ink palette. */
+    .bg-\[--n-color-embedded\] {
+      background-color: color-mix(in srgb, var(--ink-surface-solid) 82%, transparent) !important;
     }
     .n-drawer {
       background: var(--ink-sidebar) !important;

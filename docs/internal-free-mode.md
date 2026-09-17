@@ -54,6 +54,10 @@ When internal free mode is enabled:
   Dashboard, node status, profile, tickets, and traffic pages. The Dashboard
   derives the greeting name from the capitalized email prefix, contains the
   Meta subscription console, and displays the latest company announcement.
+- Both the user portal and the admin panel keep one surface palette in light
+  and dark mode. Naive UI popovers, menus, and selects follow the portal ink
+  palette, and the admin's bundled markdown editor plus the external-node
+  import overlay follow the shadcn tokens instead of staying white.
 - The former user knowledge/documentation navigation is not registered in
   internal mode; operational announcements live directly on the Dashboard.
 - The admin landing page is identity-group management. Personal traffic and
