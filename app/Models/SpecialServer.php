@@ -12,6 +12,7 @@ class SpecialServer extends Model
 
     protected $casts = [
         'group_ids' => 'array',
+        'user_ids' => 'array',
         'tags' => 'array',
         'proxy_payload' => 'array',
         'show' => 'boolean',

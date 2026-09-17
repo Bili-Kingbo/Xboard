@@ -62,7 +62,7 @@ When internal free mode is enabled:
 - Administrators can enable a daily traffic reset under node settings. When
   enabled, used traffic is cleared once per day at 00:00 in `Asia/Shanghai`,
   with a persistent date marker preventing duplicate resets.
-- Special-node import accepts remote subscriptions, Clash Meta YAML/JSON,
+- External node import accepts remote subscriptions, Clash Meta YAML/JSON,
   Base64 subscriptions, and share links for every protocol that the panel can
   deliver through the default Clash Meta subscription: Shadowsocks, VMess,
   VLESS, Trojan, Hysteria 1/2, TUIC, AnyTLS, SOCKS, HTTP, Naive, and Mieru.
@@ -73,12 +73,23 @@ When internal free mode is enabled:
   without involving Xboard Node. External nodes remain in the independent
   `v2_special_server` table and never enter the native `v2_server` lifecycle,
   health checks, traffic accounting, deployment, or user-sync flows.
+- External nodes are listed in the node management table together with native
+  nodes, tagged `外部导入`, and edited or deleted from the same row actions
+  menu. The `导入外部节点` button sits next to `添加节点`. External rows are
+  never sent to native node endpoints.
+- Nodes (native and external) can be delivered to an identity group, to
+  individually selected users, or both. The assignment lives in the `user_ids`
+  column of `v2_server` / `v2_special_server`; users outside the group still
+  receive a node that is explicitly assigned to them.
+- The node table shows the `权限组` column by default; individually assigned
+  users appear there as `@name` badges.
 - If upstream user/admin bundles are refreshed, run both patch scripts:
 
 ```bash
 node scripts/patch-internal-free-theme.mjs
 node scripts/patch-internal-access-ui.mjs
 node scripts/patch-internal-dashboard.mjs
+node scripts/patch-internal-node-admin.mjs
 ```
 
 For a local visual preview only, seed clearly non-routable example nodes:

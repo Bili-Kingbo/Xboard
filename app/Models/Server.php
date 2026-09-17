@@ -115,6 +115,7 @@ class Server extends Model
     protected $guarded = ['id'];
     protected $casts = [
         'group_ids' => 'array',
+        'user_ids' => 'array',
         'route_ids' => 'array',
         'tags' => 'array',
         'protocol_settings' => 'array',

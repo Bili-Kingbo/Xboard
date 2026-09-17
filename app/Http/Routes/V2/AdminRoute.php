@@ -86,6 +86,7 @@ class AdminRoute
             ], function ($router) {
                 $router->get('/getNodes', [ManageController::class, 'getNodes']);
                 $router->get('/getSpecialNodes', [ManageController::class, 'getSpecialNodes']);
+                $router->get('/searchUsers', [ManageController::class, 'searchUsers']);
                 $router->post('/importSpecial', [ManageController::class, 'importSpecial']);
                 $router->post('/updateSpecial', [ManageController::class, 'updateSpecial']);
                 $router->post('/dropSpecial', [ManageController::class, 'dropSpecial']);

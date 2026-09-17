@@ -54,7 +54,12 @@ class ServerService
      */
     public static function getAvailableServers(User $user): array
     {
-        $servers = Server::whereJsonContains('group_ids', (string) $user->group_id)
+        $servers = Server::where(function ($query) use ($user) {
+                if ($user->group_id) {
+                    $query->whereJsonContains('group_ids', (string) $user->group_id);
+                }
+                $query->orWhereJsonContains('user_ids', (string) $user->id);
+            })
             ->where('show', true)
             ->where(function ($query) {
                 $query->whereNull('transfer_enable')
@@ -90,11 +95,19 @@ class ServerService
     public static function getAvailableUsers(Server $node)
     {
         $groupIds = $node->group_ids ?? [];
-        if (empty($groupIds)) {
+        $userIds = $node->user_ids ?? [];
+        if (empty($groupIds) && empty($userIds)) {
             return collect();
         }
         $users = User::toBase()
-            ->whereIn('v2_user.group_id', $groupIds)
+            ->where(function ($query) use ($groupIds, $userIds) {
+                if (!empty($groupIds)) {
+                    $query->orWhereIn('v2_user.group_id', $groupIds);
+                }
+                if (!empty($userIds)) {
+                    $query->orWhereIn('v2_user.id', $userIds);
+                }
+            })
             ->where(function ($query) {
                 $query->where('v2_user.transfer_enable', 0)
                     ->orWhereRaw('(v2_user.u + v2_user.d) < v2_user.transfer_enable');

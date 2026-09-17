@@ -118,6 +118,8 @@ class ServerSave extends FormRequest
             'show' => '',
             'name' => 'required|string',
             'group_ids' => 'nullable|array',
+            'user_ids' => 'nullable|array',
+            'user_ids.*' => 'integer|exists:v2_user,id',
             'route_ids' => 'nullable|array',
             'parent_id' => 'nullable|integer',
             'machine_id' => 'nullable|integer',
