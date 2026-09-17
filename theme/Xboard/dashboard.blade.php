@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
   <title>{{$title}}</title>
-  <script type="module" crossorigin src="/theme/{{$theme}}/assets/umi.js?v=internal-dashboard-14"></script>
+  <script type="module" crossorigin src="/theme/{{$theme}}/assets/umi.js?v=internal-dashboard-15"></script>
   <style id="internal-tech-theme">
     :root {
       --portal-navy: #07152d;

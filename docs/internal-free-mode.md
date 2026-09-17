@@ -36,6 +36,10 @@ Identity groups never change a user's traffic allowance.
 When internal free mode is enabled:
 
 - Registration requires a valid server-group ID.
+- The registration identity-group picker is a Naive UI `Select` bound to the
+  same form card as the other fields, so it shares their height, border, focus
+  ring and dropdown styling. It renders only when `registration_groups` is not
+  empty, and the group is only required when the picker is offered.
 - New users receive the selected group, no plan, no expiry, and unlimited
   traffic by default.
 - Default login and magic-link redirects go to the internal Dashboard.
