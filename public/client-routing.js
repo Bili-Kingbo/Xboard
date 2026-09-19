@@ -8,8 +8,10 @@
   let documentState = null;
 
   function securePath() {
+    const rawBase = String(window.settings?.base_url || '').trim();
+    const base = rawBase === '/' ? '' : rawBase.replace(/\/+$/g, '');
     const path = String(window.settings?.secure_path || '').replace(/^\/+|\/+$/g, '');
-    return `${window.settings?.base_url || ''}/api/v2/${path}`.replace(/([^:]\/)\/+/g, '$1');
+    return `${base}/api/v2/${path}`;
   }
 
   function authHeaders() {
