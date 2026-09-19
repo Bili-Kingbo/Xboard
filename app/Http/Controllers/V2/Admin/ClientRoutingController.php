@@ -23,7 +23,11 @@ final class ClientRoutingController extends Controller
             'profiles' => ['required', 'array:codex,claude,domestic,international,shedio'],
         ];
         foreach (ClientRoutingService::IDS as $id) {
-            $rules["profiles.$id"] = ['required', 'array:target,rules_text'];
+            // The fetch response includes the canonical parsed `rules` array
+            // alongside `target` and `rules_text`. It is read-only; the
+            // service reparses rules_text, but the payload must remain
+            // round-trippable when an admin edits and saves the document.
+            $rules["profiles.$id"] = ['required', 'array:target,rules,rules_text'];
             $rules["profiles.$id.target"] = ['required', 'in:direct,proxy'];
             $rules["profiles.$id.rules_text"] = ['present', 'nullable', 'string', 'max:200000'];
         }
