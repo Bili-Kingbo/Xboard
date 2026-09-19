@@ -19,6 +19,7 @@ final class ClientRoutingService
         'DOMAIN-REGEX' => 'domain_regex',
         'IP-CIDR' => 'ip_cidr',
         'IP-CIDR6' => 'ip_cidr',
+        'IP-ASN' => 'ip_asn',
         'RULE-SET' => 'rule_set',
     ];
 
@@ -84,7 +85,7 @@ final class ClientRoutingService
             $type = strtoupper(trim($parts[0]));
             if (count($parts) === 2) {
                 if (!isset(self::KINDS[$type])) {
-                    $error('不支持此规则类型，请使用 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-REGEX、IP-CIDR 或 RULE-SET。');
+                    $error('不支持此规则类型，请使用 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-REGEX、IP-CIDR、IP-ASN 或 RULE-SET。');
                 }
                 $kind = self::KINDS[$type];
                 $value = trim($parts[1]);
@@ -131,6 +132,11 @@ final class ClientRoutingService
                     $error('IP 或 CIDR 格式无效。');
                 }
                 $value = $address.'/'.($network[1] ?? $bits);
+            } elseif ($kind === 'ip_asn') {
+                if (!ctype_digit($value) || (int) $value < 1 || (int) $value > 4294967295) {
+                    $error('ASN 必须是 1 到 4294967295 之间的数字。');
+                }
+                $value = (string) (int) $value;
             } elseif ($kind === 'rule_set') {
                 if (!in_array($value, ['geosite-cn', 'geoip-cn'], true)) {
                     $error('规则集仅支持 geosite-cn 和 geoip-cn。');

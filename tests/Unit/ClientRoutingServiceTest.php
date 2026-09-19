@@ -26,12 +26,16 @@ final class ClientRoutingServiceTest extends TestCase
             DOMAIN-SUFFIX,example.com,PROXY
             +.internal.example
             10.0.0.0/8
+            IP-CIDR6,2607:6bc0::/32,no-resolve
+            IP-ASN,399358,no-resolve
             DOMAIN-REGEX,^api\\.example\\.com$,PROXY
             RULE-SET,geosite-cn
             RULES);
 
-        $this->assertSame(['domain_suffix', 'domain_suffix', 'ip_cidr', 'domain_regex', 'rule_set'], array_column($rules, 'kind'));
+        $this->assertSame(['domain_suffix', 'domain_suffix', 'ip_cidr', 'ip_cidr', 'ip_asn', 'domain_regex', 'rule_set'], array_column($rules, 'kind'));
         $this->assertSame('10.0.0.0/8', $rules[2]['value']);
+        $this->assertSame('2607:6bc0::/32', $rules[3]['value']);
+        $this->assertSame('399358', $rules[4]['value']);
     }
 
     public function test_rules_reject_unsupported_or_invalid_values(): void

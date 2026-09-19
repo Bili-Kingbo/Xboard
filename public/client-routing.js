@@ -55,7 +55,7 @@
     addStyle();
     const overlay = document.createElement('div'); overlay.className = 'arkon-routing-overlay';
     const dialog = document.createElement('div'); dialog.className = 'arkon-routing-dialog';
-    dialog.innerHTML = `<div class="arkon-routing-head"><div><h2>客户端分流</h2><p>为每类流量选择直连或节点，并维护域名、IP、CIDR 与正则规则。</p></div><button class="arkon-routing-close" aria-label="关闭">×</button></div><div class="arkon-routing-body"><div class="arkon-routing-tabs"></div><div class="arkon-routing-editor"></div></div><div class="arkon-routing-foot"><span class="arkon-routing-hint">支持 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-REGEX、IP-CIDR、RULE-SET；也可每行直接填写域名或 CIDR。</span><button class="arkon-routing-save">保存规则</button></div>`;
+    dialog.innerHTML = `<div class="arkon-routing-head"><div><h2>客户端分流</h2><p>为每类流量选择直连或节点，并维护域名、IP、CIDR 与正则规则。</p></div><button class="arkon-routing-close" aria-label="关闭">×</button></div><div class="arkon-routing-body"><div class="arkon-routing-tabs"></div><div class="arkon-routing-editor"></div></div><div class="arkon-routing-foot"><span class="arkon-routing-hint">支持 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-REGEX、IP-CIDR、IP-ASN、RULE-SET；也可每行直接填写域名或 CIDR。</span><button class="arkon-routing-save">保存规则</button></div>`;
     overlay.appendChild(dialog); document.body.appendChild(overlay);
     const tabs = dialog.querySelector('.arkon-routing-tabs'); const editor = dialog.querySelector('.arkon-routing-editor'); let selected = ids[0];
     function render() {
