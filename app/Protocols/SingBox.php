@@ -20,6 +20,7 @@ class SingBox extends AbstractProtocol
         Server::TYPE_ANYTLS,
         Server::TYPE_SOCKS,
         Server::TYPE_HTTP,
+        Server::TYPE_MIERU,
     ];
     private $config;
     const CUSTOM_TEMPLATE_FILE = 'resources/rules/custom.sing-box.json';
@@ -176,6 +177,10 @@ class SingBox extends AbstractProtocol
             if ($item['type'] === Server::TYPE_HTTP) {
                 $httpConfig = $this->buildHttp($this->user['uuid'], $item);
                 $proxies[] = $httpConfig;
+            }
+            if ($item['type'] === Server::TYPE_MIERU) {
+                $mieruConfig = $this->buildMieru($item['password'], $item);
+                $proxies[] = $mieruConfig;
             }
         }
         foreach ($outbounds as &$outbound) {
@@ -839,6 +844,29 @@ class SingBox extends AbstractProtocol
                 $array['tls']['server_name'] = $serverName;
             }
             $this->appendEch($array['tls'], data_get($protocol_settings, 'tls_settings.ech'));
+        }
+
+        return $array;
+    }
+
+    protected function buildMieru($password, $server): array
+    {
+        $protocolSettings = data_get($server, 'protocol_settings', []);
+        $array = [
+            'type' => 'mieru',
+            'tag' => $server['name'],
+            'server' => $server['host'],
+            'server_port' => (int) $server['port'],
+            'transport' => strtoupper(data_get($protocolSettings, 'transport', 'TCP')),
+            'username' => $password,
+            'password' => $password,
+        ];
+
+        if ($ports = data_get($server, 'ports')) {
+            $array['server_ports'] = is_array($ports) ? array_values($ports) : [$ports];
+        }
+        if ($trafficPattern = data_get($protocolSettings, 'traffic_pattern')) {
+            $array['traffic_pattern'] = $trafficPattern;
         }
 
         return $array;

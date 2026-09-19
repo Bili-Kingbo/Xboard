@@ -1,0 +1,44 @@
+{
+  "codex": {
+    "target": "proxy",
+    "rules": [
+      {"kind": "domain_suffix", "value": "openai.com"},
+      {"kind": "domain_suffix", "value": "chatgpt.com"},
+      {"kind": "domain_suffix", "value": "chat.openai.com"},
+      {"kind": "domain_suffix", "value": "auth.openai.com"},
+      {"kind": "domain_suffix", "value": "desktop.chat.openai.com"},
+      {"kind": "domain_suffix", "value": "android.chat.openai.com"},
+      {"kind": "domain_suffix", "value": "ios.chat.openai.com"},
+      {"kind": "domain_suffix", "value": "oaistatic.com"},
+      {"kind": "domain_suffix", "value": "oaiusercontent.com"},
+      {"kind": "domain_suffix", "value": "oaistatsig.com"},
+      {"kind": "domain_suffix", "value": "openaimerge.com"},
+      {"kind": "domain_suffix", "value": "chat.com"},
+      {"kind": "domain_suffix", "value": "sora.com"}
+    ]
+  },
+  "claude": {
+    "target": "proxy",
+    "rules": [
+      {"kind": "domain_suffix", "value": "anthropic.com"},
+      {"kind": "domain_suffix", "value": "api.anthropic.com"},
+      {"kind": "domain_suffix", "value": "console.anthropic.com"},
+      {"kind": "domain_suffix", "value": "claude.ai"},
+      {"kind": "domain_suffix", "value": "claude.com"},
+      {"kind": "domain_suffix", "value": "claudeusercontent.com"}
+    ]
+  },
+  "domestic": {
+    "target": "direct",
+    "rules": [
+      {"kind": "domain_suffix", "value": "cn"},
+      {"kind": "rule_set", "value": "geosite-cn"},
+      {"kind": "rule_set", "value": "geoip-cn"}
+    ]
+  },
+  "international": {"target": "proxy", "rules": []},
+  "shedio": {
+    "target": "proxy",
+    "rules": [{"kind": "domain_keyword", "value": "shedio"}]
+  }
+}

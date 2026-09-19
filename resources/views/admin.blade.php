@@ -79,6 +79,7 @@
     <script src="/assets/admin/locales/ko-KR.js"></script>
   @endif
   <script defer src="/assets/admin/special-node-import.js?v={{ $assetVersion }}"></script>
+  <script defer src="/client-routing.js?v={{ $assetVersion }}-routing1"></script>
   <link rel="stylesheet" href="/assets/admin/dark-mode.css?v={{ $assetVersion }}" />
 </head>
 

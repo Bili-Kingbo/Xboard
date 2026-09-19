@@ -2,6 +2,7 @@
 namespace App\Http\Routes\V1;
 
 use App\Http\Controllers\V1\User\CommController;
+use App\Http\Controllers\V1\User\ClientRoutingController;
 use App\Http\Controllers\V1\User\CouponController;
 use App\Http\Controllers\V1\User\GiftCardController;
 use App\Http\Controllers\V1\User\InviteController;
@@ -23,6 +24,7 @@ class UserRoute
             'prefix' => 'user',
             'middleware' => 'user'
         ], function ($router) {
+            $router->get('/routing/fetch', [ClientRoutingController::class, 'fetch']);
             // User
             $router->get('/resetSecurity', [UserController::class, 'resetSecurity']);
             $router->get('/info', [UserController::class, 'info']);

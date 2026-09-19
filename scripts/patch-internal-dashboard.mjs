@@ -305,3 +305,32 @@ if (specialNodeStart >= 0 && specialNodeEnd > specialNodeStart) {
     console.log(`Marked special nodes in ${bundlePath}`);
   }
 }
+
+// The dashboard is a work surface: keep the department identity and the
+// announcement/subscription controls, while removing quota and implementation
+// metadata that belongs in an admin diagnostic view.
+bundle = readFileSync(bundlePath, 'utf8');
+const compactDashboardReplacements = [
+  ['.internal-tech-dashboard{max-width:1180px;margin:0 auto;padding-bottom:32px}', '.internal-tech-dashboard{max-width:1180px;margin:0 auto;padding-top:0;padding-bottom:24px}'],
+  ['.tech-hero{position:relative;overflow:hidden;border-radius:24px;padding:32px;', '.tech-hero{position:relative;overflow:hidden;border-radius:24px;padding:24px 30px;'],
+  [',li("span",{class:"tech-pill"},nodes.value.length+" 个可用节点")', ''],
+  ['li("div",{class:"overview-list"},[li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"部门身份组"),li("span",{class:"overview-value"},t.name||"未分组")]),li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"可用节点"),li("span",{class:"overview-value"},nodes.value.length+" 个")]),li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"用户可用流量"),li("span",{class:"overview-value"},quota(r))]),li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"本期已使用"),li("span",{class:"overview-value"},traffic(o))])]),li("div",{class:"usage-track"},[li("div",{class:"usage-bar",style:"width:"+i+"%"})])', 'li("div",{class:"overview-list"},[li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"所在部门"),li("span",{class:"overview-value"},t.name||"未分组")])])'],
+];
+let compactDashboard = bundle;
+for (const [from, to] of compactDashboardReplacements) compactDashboard = compactDashboard.replaceAll(from, to);
+compactDashboard = compactDashboard.replace(
+  'li("span",{class:"tech-pill"},nodes.value.length+" 个可用节点")',
+  'null',
+);
+const overviewStart = compactDashboard.indexOf('li("div",{class:"overview-list"},');
+const overviewEnd = compactDashboard.indexOf('          ])\n        ])', overviewStart);
+if (overviewStart >= 0 && overviewEnd > overviewStart) {
+  compactDashboard = compactDashboard.slice(0, overviewStart)
+    + 'li("div",{class:"overview-list"},[li("div",{class:"overview-row"},[li("span",{class:"overview-label"},"所在部门"),li("span",{class:"overview-value"},t.name||"未分组")])])'
+    + compactDashboard.slice(overviewEnd);
+}
+if (compactDashboard !== bundle) {
+  bundle = compactDashboard;
+  writeFileSync(bundlePath, bundle);
+  console.log(`Removed dashboard quota and diagnostic metadata from ${bundlePath}`);
+}
