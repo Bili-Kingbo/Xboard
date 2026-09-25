@@ -89,6 +89,7 @@ class AdminRoute
                 'prefix' => 'server/manage'
             ], function ($router) {
                 $router->get('/getNodes', [ManageController::class, 'getNodes']);
+                $router->get('/installCommand', [ManageController::class, 'installCommand']);
                 $router->get('/getSpecialNodes', [ManageController::class, 'getSpecialNodes']);
                 $router->get('/searchUsers', [ManageController::class, 'searchUsers']);
                 $router->post('/importSpecial', [ManageController::class, 'importSpecial']);

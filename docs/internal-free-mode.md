@@ -91,6 +91,16 @@ When internal free mode is enabled:
   receive a node that is explicitly assigned to them.
 - The node table shows the `权限组` column by default; individually assigned
   users appear there as `@name` badges.
+- Node management has explicit group and user filters. A user filter includes
+  both nodes granted through that user's identity group and nodes assigned
+  directly to that user; the two filters can be combined.
+- Native node rows offer a one-click installer command using the current
+  `app_url`, `server_token`, and node ID. The token is generated only in the
+  authenticated response to that click, never in the node list. The copied
+  command targets the tianlucloud Xboard-Node `dev/install.sh` node mode.
+- External node IDs are abbreviated as `S-<id>` in the admin list and no
+  longer show the redundant import badge. Their stored IDs and native-node
+  isolation are unchanged.
 - Client routing rules are edited under `客户端分流` and stored in the
   `client_routing_profiles` setting. The separate Clash Meta template remains
   under `系统配置 → 订阅模板`. In internal mode, Clash Meta compiles the saved

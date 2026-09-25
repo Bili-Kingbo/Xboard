@@ -140,6 +140,54 @@ class NodeAssignmentTest extends TestCase
         $this->assertSame([$user->email], array_column($rows[0]['users'], 'email'));
     }
 
+    public function test_node_management_filters_by_user_visibility_and_group(): void
+    {
+        $engineering = ServerGroup::forceCreate(['name' => 'Engineering']);
+        $marketing = ServerGroup::forceCreate(['name' => 'Marketing']);
+        $user = $this->makeUser('filter@example.com', $engineering->id);
+        $this->makeNativeNode(['name' => 'Engineering native', 'group_ids' => [(string) $engineering->id]]);
+        $this->makeNativeNode(['name' => 'Personal native', 'group_ids' => [], 'user_ids' => [(string) $user->id]]);
+        $this->makeNativeNode(['name' => 'Marketing native', 'group_ids' => [(string) $marketing->id]]);
+        SpecialServer::create([
+            'name' => 'Engineering external',
+            'type' => 'ss',
+            'group_ids' => [(string) $engineering->id],
+            'user_ids' => [],
+            'tags' => [],
+            'proxy_payload' => ['name' => 'Engineering external', 'type' => 'ss', 'server' => 'example.com', 'port' => 443],
+            'show' => true,
+        ]);
+
+        $controller = app(ManageController::class);
+        $forUser = json_decode($controller->getNodes(Request::create('/getNodes', 'GET', ['user_id' => $user->id]))->getContent(), true)['data'];
+        $forBoth = json_decode($controller->getNodes(Request::create('/getNodes', 'GET', [
+            'user_id' => $user->id,
+            'group_id' => $engineering->id,
+        ]))->getContent(), true)['data'];
+
+        $this->assertSame(['Engineering native', 'Personal native', 'Engineering external'], array_column($forUser, 'name'));
+        $this->assertSame(['Engineering native', 'Engineering external'], array_column($forBoth, 'name'));
+    }
+
+    public function test_native_install_command_uses_current_panel_token_and_node_id_only_on_demand(): void
+    {
+        admin_setting(['app_url' => 'https://vpn.example.test', 'server_token' => 'local-test-token-123456']);
+        $this->makeNativeNode(['name' => 'Installable node']);
+        $node = Server::query()->firstOrFail();
+        $controller = app(ManageController::class);
+
+        $list = $controller->getNodes(Request::create('/getNodes', 'GET'))->getContent();
+        $response = $controller->installCommand(Request::create('/installCommand', 'GET', ['id' => $node->id]));
+        $command = json_decode($response->getContent(), true)['data']['command'];
+
+        $this->assertStringNotContainsString('local-test-token-123456', $list);
+        $this->assertStringContainsString('--mode node', $command);
+        $this->assertStringContainsString("--panel 'https://vpn.example.test'", $command);
+        $this->assertStringContainsString("--token 'local-test-token-123456'", $command);
+        $this->assertStringContainsString('--node-id '.$node->id, $command);
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
     public function test_clash_routing_tags_do_not_change_native_server_routes(): void
     {
         $node = Server::create([

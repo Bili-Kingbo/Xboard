@@ -66,11 +66,97 @@ changed = replaceOnce(
 ) || changed;
 
 changed = replaceOnce(
-  'children:e.name})]})),$5t=',
-  'children:e.name}),e.is_special?Q.jsx(nKt,{variant:"outline",className:"ml-1.5 border-primary/40 px-1.5 py-0 text-[10px] font-normal text-primary",children:"外部导入"}):null]})),$5t=',
-  'external node badge',
-  'children:"外部导入"}',
+  '"Clash 分流用途"]})}),Q.jsxs($st,{className:"cursor-pointer",onClick:async()=>{YL',
+  '"Clash 分流用途"]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.copyInstallCommand(e),children:Q.jsxs("div",{className:"flex w-full items-center",children:[Q.jsx(YXt,{icon:"ion:terminal-outline",className:"mr-2 size-4"}),"复制安装命令"]})}),Q.jsxs($st,{className:"cursor-pointer",onClick:async()=>{YL',
+  'native node installer copy action',
+  'onClick:()=>window.__xboardNodeDialog.copyInstallCommand(e)',
 ) || changed;
+
+changed = replaceOnce(
+  '$L=()=>IL(UL+"/server/manage/getNodes")',
+  '$L=e=>IL(UL+"/server/manage/getNodes",{params:e})',
+  'node list API accepts management filters',
+  '$L=e=>IL(UL+"/server/manage/getNodes",{params:e})',
+) || changed;
+
+changed = replaceOnce(
+  '[b,y]=H.useState([]),{data:x,refetch:w,isLoading:C}=pC({queryKey:["nodeList"],queryFn:async()=>{const{data:e}=await $L();return e},refetchInterval:!g&&3e4});',
+  '[b,y]=H.useState([]),[xndFilters,setXndFilters]=H.useState({}),{data:x,refetch:w,isLoading:C}=pC({queryKey:["nodeList",xndFilters],queryFn:async()=>{const{data:e}=await $L(xndFilters);return e},refetchInterval:!g&&3e4});',
+  'node list refetches with selected user and group',
+  'queryKey:["nodeList",xndFilters]',
+) || changed;
+
+changed = replaceOnce(
+  'H.useEffect(()=>{!g&&Array.isArray(x)&&v(x)},[x,g]);',
+  'H.useEffect(()=>{!g&&Array.isArray(x)&&v(x)},[x,g]);H.useEffect(()=>{const e=t=>{p(!1),setXndFilters(t.detail||{}),d({pageSize:500,pageIndex:0})};return window.addEventListener("xboard:node-filters",e),()=>window.removeEventListener("xboard:node-filters",e)},[]);',
+  'node management filter event bridge',
+  'window.addEventListener("xboard:node-filters",e)',
+) || changed;
+
+if (bundle.includes('const e=t=>{setXndFilters(t.detail||{}),d({pageSize:500,pageIndex:0})}')) {
+  changed = replaceOnce(
+    'const e=t=>{setXndFilters(t.detail||{}),d({pageSize:500,pageIndex:0})}',
+    'const e=t=>{p(!1),setXndFilters(t.detail||{}),d({pageSize:500,pageIndex:0})}',
+    'leave sort mode when a node filter changes',
+  ) || changed;
+}
+
+changed = replaceOnce(
+  'saveOrder:async()=>{if(!g)return void p(!0);const t=_?.map((e,t)=>({id:e.id,order:t+1}));',
+  'saveOrder:async()=>{if(Object.keys(xndFilters).length)return void gE.error("请先清除筛选再编辑排序");if(!g)return void p(!0);const t=_?.map((e,t)=>({id:e.id,order:t+1}));',
+  'sorting requires the complete unfiltered node list',
+  'if(Object.keys(xndFilters).length)return void gE.error("请先清除筛选再编辑排序")',
+) || changed;
+
+changed = replaceOnce(
+  'e.getColumn("group_ids")&&Q.jsx(b5t,{column:e.getColumn("group_ids"),title:c("columns.groups.title"),options:r.map(e=>({label:e.name,value:e.id.toString()}))})',
+  'null/*xndGroupFilterMoved*/',
+  'group filter moved to user and group filter row',
+  'null/*xndGroupFilterMoved*/',
+) || changed;
+
+changed = replaceOnce(
+  'children:i??n',
+  'children:e.is_special?"S-"+e.special_id:(i??n)',
+  'short external node display ID',
+  'children:e.is_special?"S-"+e.special_id:(i??n)',
+) || changed;
+
+changed = replaceOnce(
+  'children:[Q.jsxs("div",{className:"flex items-center gap-3",children:[Q.jsx("span",{className:"text-xs text-muted-foreground",children:t("columns.customId")',
+  'children:[!e.is_special&&Q.jsxs("div",{className:"flex items-center gap-3",children:[Q.jsx("span",{className:"text-xs text-muted-foreground",children:t("columns.customId")',
+  'hide unavailable custom ID on external nodes',
+  'children:[!e.is_special&&Q.jsxs("div",{className:"flex items-center gap-3"',
+) || changed;
+
+changed = replaceOnce(
+  'children:e.id}),Q.jsx(Lf,{variant:"ghost",size:"icon",className:"size-6 text-muted-foreground/60 hover:text-muted-foreground"',
+  'children:e.is_special?"S-"+e.special_id:e.id}),Q.jsx(Lf,{variant:"ghost",size:"icon",className:"size-6 text-muted-foreground/60 hover:text-muted-foreground"',
+  'external node tooltip uses short ID',
+  'children:e.is_special?"S-"+e.special_id:e.id}',
+) || changed;
+
+changed = replaceOnce(
+  'IS(String(e.id)).then',
+  'IS(e.is_special?"S-"+e.special_id:String(e.id)).then',
+  'external node tooltip copies displayed ID',
+  'IS(e.is_special?"S-"+e.special_id:String(e.id)).then',
+) || changed;
+
+changed = replaceOnce(
+  'children:Q.jsx(Iat,{className:"size-3"})})]})}),Q.jsxs(Qot',
+  'children:Q.jsx(Iat,{className:"size-3"})}),!e.is_special&&Q.jsx(Lf,{variant:"ghost",size:"icon",title:"复制安装命令","aria-label":"复制安装命令",className:"size-6 text-primary hover:bg-primary/10",onClick:t=>{t.stopPropagation(),window.__xboardNodeDialog.copyInstallCommand(e)},children:Q.jsx(YXt,{icon:"ion:terminal-outline",className:"size-4"})})]})}),Q.jsxs(Qot',
+  'one-click native node installer button',
+  '"aria-label":"复制安装命令"',
+) || changed;
+
+if (bundle.includes('children:"外部导入"}')) {
+  changed = replaceOnce(
+    ',e.is_special?Q.jsx(nKt,{variant:"outline",className:"ml-1.5 border-primary/40 px-1.5 py-0 text-[10px] font-normal text-primary",children:"外部导入"}):null',
+    '',
+    'remove redundant external node badge',
+  ) || changed;
+}
 
 changed = replaceOnce(
   'cell:({row:e})=>{const n=e.original.groups||[];return Q.jsxs("div",{className:"flex flex-wrap gap-1.5",children:[n.map(',

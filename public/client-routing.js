@@ -99,9 +99,19 @@
   function installEntry() {
     if (document.getElementById(id)) return;
     const settingLink = [...document.querySelectorAll('a')].find((item) => String(item.getAttribute('href') || '').includes('/config/system'));
-    const nav = settingLink?.closest('nav') || settingLink?.closest('aside') || settingLink?.parentElement?.parentElement;
-    if (!nav) return;
-    const entry = document.createElement('button'); entry.id = id; entry.type = 'button'; entry.textContent = '客户端分流'; entry.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px 12px;border:1px solid hsl(var(--border));border-radius:9px;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:12px'; entry.onclick = () => load().catch((error) => toast(error.message, true)); nav.appendChild(entry);
+    const list = settingLink?.parentElement?.parentElement;
+    if (!settingLink || list?.tagName !== 'UL') return;
+    const item = document.createElement('li');
+    item.className = settingLink.parentElement.className;
+    const entry = document.createElement('button');
+    entry.id = id;
+    entry.type = 'button';
+    entry.className = settingLink.className;
+    const routeLink = [...document.querySelectorAll('a')].find((link) => String(link.getAttribute('href') || '').includes('/server/route'));
+    entry.append((routeLink?.firstElementChild || settingLink.firstElementChild)?.cloneNode(true) || document.createElement('span'), document.createTextNode('客户端分流'));
+    entry.onclick = () => load().catch((error) => toast(error.message, true));
+    item.appendChild(entry);
+    list.appendChild(item);
   }
   new MutationObserver(installEntry).observe(document.documentElement, { childList: true, subtree: true });
   setTimeout(installEntry, 900);

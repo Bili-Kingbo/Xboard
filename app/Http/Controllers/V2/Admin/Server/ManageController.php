@@ -44,6 +44,13 @@ class ManageController extends Controller
 
     public function getNodes(Request $request)
     {
+        $filters = $request->validate([
+            'group_id' => 'nullable|integer|exists:v2_server_group,id',
+            'user_id' => 'nullable|integer|exists:v2_user,id',
+        ]);
+        $filterUser = isset($filters['user_id']) ? User::findOrFail($filters['user_id']) : null;
+        $filterGroupId = isset($filters['group_id']) ? (string) $filters['group_id'] : null;
+
         $servers = ServerService::getAllServers()->map(function ($item) {
             $item['groups'] = ServerGroup::whereIn('id', $item['group_ids'] ?? [])->get(['name', 'id']);
             $item['parent'] = $item->parent;
@@ -66,7 +73,57 @@ class ManageController extends Controller
         $external = SpecialServerService::listForAdmin()
             ->map(fn (SpecialServer $node) => SpecialServerService::toAdminRow($node));
 
-        return $this->success($servers->concat($external)->values());
+        $nodes = $servers->concat($external)->filter(function ($node) use ($filterUser, $filterGroupId) {
+            $groupIds = array_map('strval', $node['group_ids'] ?? []);
+            $userIds = array_map('strval', $node['user_ids'] ?? []);
+            if ($filterGroupId !== null && !in_array($filterGroupId, $groupIds, true)) {
+                return false;
+            }
+            if ($filterUser === null) {
+                return true;
+            }
+            return in_array((string) $filterUser->id, $userIds, true)
+                || ($filterUser->group_id !== null
+                    && in_array((string) $filterUser->group_id, $groupIds, true));
+        })->values();
+
+        return $this->success($nodes);
+    }
+
+    /**
+     * Generate a one-time copyable node-mode command from current settings.
+     * The shared node token must never be embedded in the node list response.
+     */
+    public function installCommand(Request $request)
+    {
+        $params = $request->validate([
+            'id' => 'required|integer|exists:v2_server,id',
+        ]);
+
+        $panelUrl = rtrim((string) (admin_setting('app_url') ?: $request->getSchemeAndHttpHost()), '/');
+        $scheme = strtolower((string) parse_url($panelUrl, PHP_URL_SCHEME));
+        $host = parse_url($panelUrl, PHP_URL_HOST);
+        if (!in_array($scheme, ['http', 'https'], true) || !$host) {
+            throw new ApiException('请先在系统配置中设置有效的站点网址');
+        }
+
+        $token = (string) admin_setting('server_token', '');
+        if ($token === '') {
+            throw new ApiException('请先在系统配置中设置节点通讯密钥');
+        }
+
+        $installerUrl = 'https://raw.githubusercontent.com/tianlucloud/Xboard-Node/dev/install.sh';
+        $command = sprintf(
+            "curl -fsSL %s | \\\nsudo bash -s -- \\\n  --mode node \\\n  --panel %s \\\n  --token %s \\\n  --node-id %d",
+            escapeshellarg($installerUrl),
+            escapeshellarg($panelUrl),
+            escapeshellarg($token),
+            (int) $params['id'],
+        );
+
+        return $this->success(['command' => $command])
+            ->header('Cache-Control', 'private, no-store')
+            ->header('Pragma', 'no-cache');
     }
 
     public function getSpecialNodes(Request $request)
