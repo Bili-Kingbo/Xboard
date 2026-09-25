@@ -91,6 +91,17 @@ When internal free mode is enabled:
   receive a node that is explicitly assigned to them.
 - The node table shows the `权限组` column by default; individually assigned
   users appear there as `@name` badges.
+- Client routing rules are edited under `客户端分流` and stored in the
+  `client_routing_profiles` setting. The separate Clash Meta template remains
+  under `系统配置 → 订阅模板`. In internal mode, Clash Meta compiles the saved
+  rules into policy groups after filtering nodes for the subscribing user.
+- Native and external nodes have independent `client_routing_profile_ids`
+  fields. OpenAI/Codex, Claude, Shedio, and international policy groups list
+  the general proxy group first, then their tagged nodes as manual choices.
+  Tagged nodes are never selected automatically. Domestic traffic follows its
+  saved direct/proxy setting; nonmatching traffic follows the international
+  group. The admin preview shows the resulting groups and rules for one user
+  without exposing node connection credentials.
 - If upstream user/admin bundles are refreshed, run both patch scripts:
 
 ```bash

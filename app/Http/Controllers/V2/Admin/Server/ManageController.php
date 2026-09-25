@@ -9,12 +9,14 @@ use App\Models\Server;
 use App\Models\ServerGroup;
 use App\Models\SpecialServer;
 use App\Models\User;
+use App\Services\ClientRoutingService;
 use App\Services\ServerService;
 use App\Services\SpecialNodeImportService;
 use App\Services\SpecialServerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ManageController extends Controller
 {
@@ -108,6 +110,8 @@ class ManageController extends Controller
             'user_ids.*' => 'required|integer|exists:v2_user,id',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:40',
+            'client_routing_profile_ids' => 'nullable|array',
+            'client_routing_profile_ids.*' => ['string', 'distinct', Rule::in(ClientRoutingService::NODE_IDS)],
             'show' => 'nullable|boolean',
         ]);
 
@@ -121,15 +125,17 @@ class ManageController extends Controller
             return $this->fail([422, '请至少选择一个身份组或一名用户']);
         }
 
-        $created = DB::transaction(function () use ($parsed, $groupIds, $userIds, $tags, $show) {
+        $profileIds = array_values($params['client_routing_profile_ids'] ?? []);
+        $created = DB::transaction(function () use ($parsed, $groupIds, $userIds, $tags, $profileIds, $show) {
             $nextSort = (int) SpecialServer::max('sort');
-            return collect($parsed['proxies'])->map(function (array $proxy) use ($parsed, $groupIds, $userIds, $tags, $show, &$nextSort) {
+            return collect($parsed['proxies'])->map(function (array $proxy) use ($parsed, $groupIds, $userIds, $tags, $profileIds, $show, &$nextSort) {
                 return SpecialServer::create([
                     'name' => $proxy['name'],
                     'type' => $proxy['type'],
                     'group_ids' => $groupIds,
                     'user_ids' => $userIds,
                     'tags' => $tags,
+                    'client_routing_profile_ids' => $profileIds,
                     'proxy_payload' => $proxy,
                     'source_type' => $parsed['source_type'],
                     'source_label' => $parsed['source_label'],
@@ -141,7 +147,7 @@ class ManageController extends Controller
 
         return $this->success([
             'count' => $created->count(),
-            'nodes' => $created->map->only(['id', 'name', 'type', 'group_ids', 'user_ids', 'tags', 'show']),
+            'nodes' => $created->map->only(['id', 'name', 'type', 'group_ids', 'user_ids', 'tags', 'client_routing_profile_ids', 'show']),
         ]);
     }
 
@@ -156,10 +162,17 @@ class ManageController extends Controller
             'user_ids.*' => 'integer|exists:v2_user,id',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:40',
+            'client_routing_profile_ids' => 'nullable|array',
+            'client_routing_profile_ids.*' => ['string', 'distinct', Rule::in(ClientRoutingService::NODE_IDS)],
             'show' => 'nullable|boolean',
         ]);
         $node = SpecialServer::findOrFail($params['id']);
         unset($params['id']);
+        if (isset($params['name'])) {
+            $params['proxy_payload'] = array_replace($node->proxy_payload, [
+                'name' => $params['name'],
+            ]);
+        }
         if (isset($params['group_ids'])) {
             $params['group_ids'] = collect($params['group_ids'])->map(fn ($id) => (string) $id)->unique()->values()->all();
         }
@@ -263,6 +276,8 @@ class ManageController extends Controller
             'enabled' => 'nullable|boolean',
             'user_ids' => 'nullable|array',
             'user_ids.*' => 'integer|exists:v2_user,id',
+            'client_routing_profile_ids' => 'nullable|array',
+            'client_routing_profile_ids.*' => ['string', 'distinct', Rule::in(ClientRoutingService::NODE_IDS)],
         ]);
 
         $server = Server::find($request->id);
@@ -276,6 +291,9 @@ class ManageController extends Controller
                 ->unique()
                 ->values()
                 ->all();
+        }
+        if (array_key_exists('client_routing_profile_ids', $params)) {
+            $server->client_routing_profile_ids = array_values($params['client_routing_profile_ids']);
         }
         if (array_key_exists('show', $params)) {
             $server->show = (int) $params['show'];

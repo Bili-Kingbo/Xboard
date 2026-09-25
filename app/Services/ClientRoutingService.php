@@ -12,6 +12,7 @@ final class ClientRoutingService
 {
     public const KEY = 'client_routing_profiles';
     public const IDS = ['codex', 'claude', 'domestic', 'international', 'shedio'];
+    public const NODE_IDS = ['codex', 'claude', 'international', 'shedio'];
     private const KINDS = [
         'DOMAIN' => 'domain',
         'DOMAIN-SUFFIX' => 'domain_suffix',

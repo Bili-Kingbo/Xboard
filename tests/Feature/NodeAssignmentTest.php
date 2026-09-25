@@ -140,6 +140,29 @@ class NodeAssignmentTest extends TestCase
         $this->assertSame([$user->email], array_column($rows[0]['users'], 'email'));
     }
 
+    public function test_clash_routing_tags_do_not_change_native_server_routes(): void
+    {
+        $node = Server::create([
+            'name' => 'Native route isolation',
+            'type' => Server::TYPE_VMESS,
+            'host' => 'native.example.com',
+            'port' => 443,
+            'server_port' => 443,
+            'rate' => 1,
+            'show' => true,
+            'route_ids' => [19],
+        ]);
+
+        app(ManageController::class)->update(Request::create('/server/manage/update', 'POST', [
+            'id' => $node->id,
+            'client_routing_profile_ids' => ['codex', 'claude'],
+        ]));
+
+        $node->refresh();
+        $this->assertSame(['codex', 'claude'], $node->client_routing_profile_ids);
+        $this->assertSame([19], $node->route_ids);
+    }
+
     private function makeUser(string $email, ?int $groupId): User
     {
         return User::create([

@@ -117,6 +117,7 @@ class Server extends Model
         'group_ids' => 'array',
         'user_ids' => 'array',
         'route_ids' => 'array',
+        'client_routing_profile_ids' => 'array',
         'tags' => 'array',
         'protocol_settings' => 'array',
         'custom_outbounds' => 'array',

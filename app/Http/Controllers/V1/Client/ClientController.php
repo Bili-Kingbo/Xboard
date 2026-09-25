@@ -206,6 +206,7 @@ class ClientController extends Controller
         if ($rejectServerCount > 0) {
             array_unshift($servers, array_merge($servers[0], [
                 'name' => "过滤掉{$rejectServerCount}条线路",
+                'client_routing_profile_ids' => [],
             ]));
         }
         if (!(int) admin_setting('show_info_to_server_enable', 0))
@@ -220,14 +221,17 @@ class ClientController extends Controller
         $resetDay = $userService->getResetDay($user);
         array_unshift($servers, array_merge($servers[0], [
             'name' => "套餐到期：{$expiredDate}",
+            'client_routing_profile_ids' => [],
         ]));
         if ($resetDay) {
             array_unshift($servers, array_merge($servers[0], [
                 'name' => "距离下次重置剩余：{$resetDay} 天",
+                'client_routing_profile_ids' => [],
             ]));
         }
         array_unshift($servers, array_merge($servers[0], [
             'name' => "剩余流量：{$remainingTraffic}",
+            'client_routing_profile_ids' => [],
         ]));
     }
 

@@ -33,8 +33,31 @@ class SpecialServerService
             ->orderBy('sort')
             ->orderBy('id')
             ->get()
-            ->map(fn (SpecialServer $server) => $server->proxy_payload)
+            ->map(fn (SpecialServer $server) => array_replace($server->proxy_payload, [
+                'name' => $server->name,
+            ]))
             ->values()
+            ->all();
+    }
+
+    /**
+     * Keep client routing metadata separate from the static proxy payload.
+     *
+     * @return array<int, array{proxy: array<string, mixed>, profiles: array<int, string>}>
+     */
+    public static function getAvailableProxyEntries(User $user): array
+    {
+        return self::scopeAvailableFor(SpecialServer::query(), $user)
+            ->where('show', true)
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (SpecialServer $server) => [
+                'proxy' => array_replace($server->proxy_payload, [
+                    'name' => $server->name,
+                ]),
+                'profiles' => array_values($server->client_routing_profile_ids ?? []),
+            ])
             ->all();
     }
 
@@ -121,6 +144,7 @@ class SpecialServerService
             'is_online' => true,
             'parent' => null,
             'tags' => array_values($node->tags ?? []),
+            'client_routing_profile_ids' => array_values($node->client_routing_profile_ids ?? []),
             'group_ids' => array_values($node->group_ids ?? []),
             'user_ids' => array_values($node->user_ids ?? []),
             'groups' => collect($node->getAttribute('groups') ?? [])->all(),

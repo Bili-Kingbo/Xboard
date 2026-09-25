@@ -32,6 +32,7 @@ class AdminRoute
         ], function ($router) {
             $router->get('/routing/fetch', [ClientRoutingController::class, 'fetch']);
             $router->post('/routing/save', [ClientRoutingController::class, 'save']);
+            $router->get('/routing/preview', [ClientRoutingController::class, 'preview']);
             // Config
             $router->group([
                 'prefix' => 'config'

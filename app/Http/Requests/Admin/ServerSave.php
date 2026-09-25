@@ -4,7 +4,9 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Server;
+use App\Services\ClientRoutingService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ServerSave extends FormRequest
 {
@@ -121,6 +123,8 @@ class ServerSave extends FormRequest
             'user_ids' => 'nullable|array',
             'user_ids.*' => 'integer|exists:v2_user,id',
             'route_ids' => 'nullable|array',
+            'client_routing_profile_ids' => 'nullable|array',
+            'client_routing_profile_ids.*' => ['string', 'distinct', Rule::in(ClientRoutingService::NODE_IDS)],
             'parent_id' => 'nullable|integer',
             'machine_id' => 'nullable|integer',
             'enabled' => 'nullable|boolean',

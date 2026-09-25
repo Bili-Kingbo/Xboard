@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\V2\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\V1\Client\ClientController;
+use App\Models\User;
 use App\Services\ClientRoutingService;
+use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\Yaml\Yaml;
 
 final class ClientRoutingController extends Controller
 {
@@ -33,5 +37,31 @@ final class ClientRoutingController extends Controller
         }
         $validated = $request->validate($rules);
         return response()->json(['data' => $routing->save($validated['profiles'], $validated['revision'])]);
+    }
+
+    public function preview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:v2_user,id'],
+        ]);
+        $user = User::findOrFail($validated['user_id']);
+        if (!(new UserService())->isAvailable($user)) {
+            return response()->json(['message' => '该用户当前无法获取订阅'], 422);
+        }
+
+        $previewRequest = Request::create('/s/preview', 'GET', ['flag' => 'meta']);
+        $response = app(ClientController::class)->doSubscribe($previewRequest, $user);
+        $config = Yaml::parse($response->getContent());
+        $routing = [
+            'proxy-groups' => $config['proxy-groups'] ?? [],
+            'rules' => $config['rules'] ?? [],
+        ];
+
+        return response()->json(['data' => [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'node_count' => count($config['proxies'] ?? []),
+            'yaml' => Yaml::dump($routing, 4, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE),
+        ]]);
     }
 }

@@ -5,6 +5,8 @@ namespace App\Protocols;
 use App\Models\Server;
 use App\Models\User;
 use App\Services\SpecialServerService;
+use App\Services\ClientRoutingService;
+use App\Services\ClashClientRoutingService;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Yaml\Yaml;
@@ -154,8 +156,10 @@ class ClashMeta extends AbstractProtocol
         $config = Yaml::parse($template);
         $proxy = [];
         $proxies = [];
+        $routingNodes = [];
 
         foreach ($servers as $item) {
+            $beforeCount = count($proxy);
             if ($item['type'] === Server::TYPE_SHADOWSOCKS) {
                 array_push($proxy, self::buildShadowsocks($item['password'], $item));
                 array_push($proxies, $item['name']);
@@ -196,10 +200,17 @@ class ClashMeta extends AbstractProtocol
                 array_push($proxy, self::buildMieru($item['password'], $item));
                 array_push($proxies, $item['name']);
             }
+            if (count($proxy) > $beforeCount) {
+                $routingNodes[] = [
+                    'name' => $proxy[array_key_last($proxy)]['name'],
+                    'profiles' => array_values($item['client_routing_profile_ids'] ?? []),
+                ];
+            }
         }
 
         if ($user instanceof User) {
-            foreach (SpecialServerService::getAvailableProxies($user) as $specialProxy) {
+            foreach (SpecialServerService::getAvailableProxyEntries($user) as $entry) {
+                $specialProxy = $entry['proxy'];
                 $baseName = trim((string) ($specialProxy['name'] ?? '特殊节点')) ?: '特殊节点';
                 $name = $baseName;
                 $suffix = 2;
@@ -209,6 +220,10 @@ class ClashMeta extends AbstractProtocol
                 $specialProxy['name'] = $name;
                 $proxy[] = $specialProxy;
                 $proxies[] = $name;
+                $routingNodes[] = [
+                    'name' => $name,
+                    'profiles' => $entry['profiles'],
+                ];
             }
         }
 
@@ -238,6 +253,13 @@ class ClashMeta extends AbstractProtocol
             return $group['proxies'];
         });
         $config['proxy-groups'] = array_values($config['proxy-groups']);
+        if (config('app.internal_free_mode')) {
+            $config = app(ClashClientRoutingService::class)->apply(
+                $config,
+                app(ClientRoutingService::class)->fetch(),
+                $routingNodes
+            );
+        }
         $config = $this->buildRules($config);
 
         $yaml = Yaml::dump($config, 2, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
@@ -255,9 +277,14 @@ class ClashMeta extends AbstractProtocol
     public function buildRules($config)
     {
         // Force the current subscription domain to be a direct rule
-        $subsDomain = request()->header('Host');
+        $subsDomain = request()->getHost();
         if ($subsDomain) {
-            array_unshift($config['rules'], "DOMAIN,{$subsDomain},DIRECT");
+            $hostRule = filter_var($subsDomain, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+                ? "IP-CIDR,{$subsDomain}/32,DIRECT,no-resolve"
+                : (filter_var($subsDomain, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)
+                    ? "IP-CIDR6,{$subsDomain}/128,DIRECT,no-resolve"
+                    : "DOMAIN,{$subsDomain},DIRECT");
+            array_unshift($config['rules'], $hostRule);
         }
         // // Force the nodes ip to be a direct rule
         // collect($this->servers)->pluck('host')->map(function ($host) {

@@ -52,6 +52,20 @@ changed = replaceOnce(
 ) || changed;
 
 changed = replaceOnce(
+  '"编辑外部节点"]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.assignUsers(e,t)',
+  '"编辑外部节点"]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.editRouting(e,t),children:Q.jsxs("div",{className:"flex w-full items-center",children:[Q.jsx(YXt,{icon:"ion:git-branch-outline",className:"mr-2 size-4"}),"Clash 分流用途"]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.assignUsers(e,t)',
+  'external node manual Clash routing action',
+  '"编辑外部节点"]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.editRouting(e,t)',
+) || changed;
+
+changed = replaceOnce(
+  'n("columns.actions_dropdown.edit")]})}),Q.jsxs($st,{className:"cursor-pointer",onClick:async()=>{YL',
+  'n("columns.actions_dropdown.edit")]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.editRouting(e,t),children:Q.jsxs("div",{className:"flex w-full items-center",children:[Q.jsx(YXt,{icon:"ion:git-branch-outline",className:"mr-2 size-4"}),"Clash 分流用途"]})}),Q.jsxs($st,{className:"cursor-pointer",onClick:async()=>{YL',
+  'native node manual Clash routing action',
+  'n("columns.actions_dropdown.edit")]})}),Q.jsx($st,{className:"cursor-pointer",onClick:()=>window.__xboardNodeDialog.editRouting(e,t)',
+) || changed;
+
+changed = replaceOnce(
   'children:e.name})]})),$5t=',
   'children:e.name}),e.is_special?Q.jsx(nKt,{variant:"outline",className:"ml-1.5 border-primary/40 px-1.5 py-0 text-[10px] font-normal text-primary",children:"外部导入"}):null]})),$5t=',
   'external node badge',
